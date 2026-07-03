@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash_set('success', "“{$name}” has been updated.");
             } else {
                 db()->prepare('INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
-                               VALUES (?,?,?,?,?,?,?,?,?, (SELECT COALESCE(MAX(sort),0)+1 FROM products))')
+                               VALUES (?,?,?,?,?,?,?,?,?, (SELECT s FROM (SELECT COALESCE(MAX(sort),0)+1 AS s FROM products) t))')
                     ->execute($row);
                 flash_set('success', "“{$name}” has been added to the catalog.");
             }
@@ -418,10 +418,10 @@ if ($view === 'reports') {
 
     $count = static fn(string $sql): int => (int)$d->query($sql)->fetchColumn();
     $report = [
-        'views_30'    => $count("SELECT COUNT(*) FROM events WHERE type='pageview' AND created_at >= datetime('now','-30 days')"),
-        'visitors_30' => $count("SELECT COUNT(DISTINCT visitor) FROM events WHERE type='pageview' AND created_at >= datetime('now','-30 days')"),
-        'quotes_30'   => $count("SELECT COUNT(*) FROM events WHERE type='quote_click' AND created_at >= datetime('now','-30 days')"),
-        'inq_30'      => $count("SELECT COUNT(*) FROM inquiries WHERE created_at >= datetime('now','-30 days')"),
+        'views_30'    => $count("SELECT COUNT(*) FROM events WHERE type='pageview' AND created_at >= NOW() - INTERVAL 30 DAY"),
+        'visitors_30' => $count("SELECT COUNT(DISTINCT visitor) FROM events WHERE type='pageview' AND created_at >= NOW() - INTERVAL 30 DAY"),
+        'quotes_30'   => $count("SELECT COUNT(*) FROM events WHERE type='quote_click' AND created_at >= NOW() - INTERVAL 30 DAY"),
+        'inq_30'      => $count("SELECT COUNT(*) FROM inquiries WHERE created_at >= NOW() - INTERVAL 30 DAY"),
     ];
     $report['conversion'] = $report['visitors_30'] > 0
         ? round($report['inq_30'] / $report['visitors_30'] * 100, 1)
@@ -433,15 +433,15 @@ if ($view === 'reports') {
         $day = (new DateTime("-{$i} days", new DateTimeZone('UTC')))->format('Y-m-d');
         $series[$day] = ['views' => 0, 'quotes' => 0, 'inquiries' => 0];
     }
-    $sql = "SELECT date(created_at) d, type, COUNT(*) c FROM events
-            WHERE created_at >= datetime('now','-14 days') GROUP BY d, type";
+    $sql = "SELECT DATE(created_at) d, type, COUNT(*) c FROM events
+            WHERE created_at >= NOW() - INTERVAL 14 DAY GROUP BY d, type";
     foreach ($d->query($sql) as $r) {
         if (!isset($series[$r['d']])) continue;
         if ($r['type'] === 'pageview')    $series[$r['d']]['views']  = (int)$r['c'];
         if ($r['type'] === 'quote_click') $series[$r['d']]['quotes'] = (int)$r['c'];
     }
-    foreach ($d->query("SELECT date(created_at) d, COUNT(*) c FROM inquiries
-                        WHERE created_at >= datetime('now','-14 days') GROUP BY d") as $r) {
+    foreach ($d->query("SELECT DATE(created_at) d, COUNT(*) c FROM inquiries
+                        WHERE created_at >= NOW() - INTERVAL 14 DAY GROUP BY d") as $r) {
         if (isset($series[$r['d']])) $series[$r['d']]['inquiries'] = (int)$r['c'];
     }
     $report['series']    = $series;
@@ -449,12 +449,12 @@ if ($view === 'reports') {
 
     $report['top_quoted'] = $d->query(
         "SELECT label, COUNT(*) c, COUNT(DISTINCT visitor) v FROM events
-         WHERE type='quote_click' AND label != '' AND created_at >= datetime('now','-30 days')
+         WHERE type='quote_click' AND label != '' AND created_at >= NOW() - INTERVAL 30 DAY
          GROUP BY label ORDER BY c DESC LIMIT 8"
     )->fetchAll();
     $report['top_interests'] = $d->query(
         "SELECT interest, COUNT(*) c FROM inquiries
-         WHERE interest != '' AND created_at >= datetime('now','-30 days')
+         WHERE interest != '' AND created_at >= NOW() - INTERVAL 30 DAY
          GROUP BY interest ORDER BY c DESC LIMIT 8"
     )->fetchAll();
     $report['sources'] = $d->query(

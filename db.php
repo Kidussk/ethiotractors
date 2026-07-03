@@ -1,7 +1,7 @@
 <?php
 /**
- * EthioTractors — shared bootstrap: PDO/SQLite connection, schema, seed data, helpers.
- * Requires PHP 8+ with pdo_sqlite (available on virtually every shared host).
+ * EthioTractors — shared bootstrap: PDO/MySQL connection, schema, seed data, helpers.
+ * Requires PHP 8+ with pdo_mysql. Credentials live in config.php.
  */
 
 declare(strict_types=1);
@@ -21,8 +21,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-define('ET_DATA_DIR', __DIR__ . '/data');
-define('ET_DB_FILE', ET_DATA_DIR . '/ethiotractors.sqlite');
+require __DIR__ . '/config.php';
 
 /** HTML-escape shortcut. */
 function e(?string $s): string
@@ -38,23 +37,18 @@ function db(): PDO
         return $pdo;
     }
 
-    if (!is_dir(ET_DATA_DIR)) {
-        mkdir(ET_DATA_DIR, 0755, true);
-    }
-    // Keep the SQLite file out of reach on Apache hosts.
-    $ht = ET_DATA_DIR . '/.htaccess';
-    if (!file_exists($ht)) {
-        file_put_contents($ht, "Require all denied\n");
-    }
-
-    $fresh = !file_exists(ET_DB_FILE);
-    $pdo = new PDO('sqlite:' . ET_DB_FILE);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-    $pdo->exec('PRAGMA journal_mode = WAL');
-    $pdo->exec('PRAGMA foreign_keys = ON');
+    $dsn = 'mysql:host=' . ET_DB_HOST . ';dbname=' . ET_DB_NAME . ';charset=utf8mb4';
+    $pdo = new PDO($dsn, ET_DB_USER, ET_DB_PASS, [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ]);
+    // Store timestamps in UTC (the admin panel converts to Africa/Addis_Ababa).
+    $pdo->exec("SET time_zone = '+00:00'");
 
     et_migrate($pdo);
+    // Seed only when the database is empty (first run).
+    $fresh = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0;
     if ($fresh) {
         et_seed($pdo);
     }
@@ -65,49 +59,57 @@ function et_migrate(PDO $pdo): void
 {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS products (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            name        TEXT NOT NULL,
-            sector      TEXT NOT NULL CHECK (sector IN ('agriculture','construction','mining')),
-            category    TEXT NOT NULL DEFAULT '',
-            brand       TEXT NOT NULL DEFAULT '',
-            description TEXT NOT NULL DEFAULT '',
-            specs       TEXT NOT NULL DEFAULT '[]',
-            tags        TEXT NOT NULL DEFAULT '',
-            icon        TEXT NOT NULL DEFAULT 'machine',
-            image_url   TEXT NOT NULL DEFAULT '',
-            sort        INTEGER NOT NULL DEFAULT 0,
-            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-        );
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            name        VARCHAR(255) NOT NULL,
+            sector      VARCHAR(20) NOT NULL,
+            category    VARCHAR(120) NOT NULL DEFAULT '',
+            brand       VARCHAR(120) NOT NULL DEFAULT '',
+            description TEXT NOT NULL,
+            specs       TEXT NOT NULL,
+            tags        VARCHAR(255) NOT NULL DEFAULT '',
+            icon        VARCHAR(40) NOT NULL DEFAULT 'machine',
+            image_url   VARCHAR(500) NOT NULL DEFAULT '',
+            sort        INT NOT NULL DEFAULT 0,
+            created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS inquiries (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            name       TEXT NOT NULL,
-            company    TEXT NOT NULL DEFAULT '',
-            email      TEXT NOT NULL DEFAULT '',
-            phone      TEXT NOT NULL DEFAULT '',
-            industry   TEXT NOT NULL DEFAULT '',
-            interest   TEXT NOT NULL DEFAULT '',
-            message    TEXT NOT NULL DEFAULT '',
-            source     TEXT NOT NULL DEFAULT 'contact',
-            status     TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','contacted','closed')),
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(120) NOT NULL,
+            company    VARCHAR(120) NOT NULL DEFAULT '',
+            email      VARCHAR(160) NOT NULL DEFAULT '',
+            phone      VARCHAR(60) NOT NULL DEFAULT '',
+            industry   VARCHAR(40) NOT NULL DEFAULT '',
+            interest   VARCHAR(200) NOT NULL DEFAULT '',
+            message    TEXT NOT NULL,
+            source     VARCHAR(20) NOT NULL DEFAULT 'contact',
+            status     VARCHAR(20) NOT NULL DEFAULT 'new',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
-            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            username  TEXT NOT NULL UNIQUE,
-            pass_hash TEXT NOT NULL
-        );
+            id        INT AUTO_INCREMENT PRIMARY KEY,
+            username  VARCHAR(120) NOT NULL UNIQUE,
+            pass_hash VARCHAR(255) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS settings (
-            key   TEXT PRIMARY KEY,
-            value TEXT NOT NULL DEFAULT ''
-        );
+            `key`   VARCHAR(64) PRIMARY KEY,
+            `value` TEXT NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS events (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            type       TEXT NOT NULL,
-            label      TEXT NOT NULL DEFAULT '',
-            visitor    TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_events_type_date ON events (type, created_at);
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            type       VARCHAR(40) NOT NULL,
+            label      VARCHAR(200) NOT NULL DEFAULT '',
+            visitor    VARCHAR(32) NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_events_type_date (type, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
 }
 
@@ -132,7 +134,7 @@ function et_seed(PDO $pdo): void
         'linkedin'      => '',
         'trade_license' => '',
     ];
-    $stmt = $pdo->prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?)');
     foreach ($defaults as $k => $v) {
         $stmt->execute([$k, $v]);
     }
@@ -279,7 +281,7 @@ function et_settings(): array
     static $cache = null;
     if ($cache === null) {
         $cache = [];
-        foreach (db()->query('SELECT key, value FROM settings') as $row) {
+        foreach (db()->query('SELECT `key`, `value` FROM settings') as $row) {
             $cache[$row['key']] = $row['value'];
         }
     }
@@ -288,8 +290,8 @@ function et_settings(): array
 
 function et_save_setting(string $key, string $value): void
 {
-    db()->prepare('INSERT INTO settings (key, value) VALUES (?, ?)
-                   ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    db()->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?)
+                   ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)')
         ->execute([$key, $value]);
 }
 
