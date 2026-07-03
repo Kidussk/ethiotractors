@@ -1,0 +1,186 @@
+/* ============================================================
+   EthioTractors — shared design system
+   One source of truth for colors, type, radii, shadows,
+   buttons, form fields and chips — used by BOTH the public
+   site and the admin panel so the design stays consistent.
+   ============================================================ */
+:root{
+  /* ---- Palette ---- */
+  --ink:#1D2218;            /* primary text & dark surfaces */
+  --ink-2:#272D20;          /* raised dark surface */
+  --bg:#FBFAF7;             /* page background */
+  --bg-alt:#F3F1E9;         /* alternate section background */
+  --surface:#FFFFFF;        /* cards & panels */
+  --brand:#C0752A;          /* amber — primary accent */
+  --brand-strong:#A25E1D;
+  --brand-soft:#F6EBDD;     /* tinted fills */
+  --gold:#E2A63C;
+  --green:#44613B;
+  --green-soft:#E8EDE0;
+  --steel:#4C5A64;
+  --steel-soft:#E5EAED;
+  --earth:#7A5C36;
+  --earth-soft:#EFE8DB;
+  --danger:#AC4130;
+  --danger-soft:#F6E4E0;
+  --muted:#6C7263;
+  --line:rgba(29,34,24,.08);
+  --line-strong:rgba(29,34,24,.15);
+  --line-inv:rgba(251,250,247,.14);
+  --white:#FFFFFF;
+
+  /* ---- Legacy aliases (used by inline styles) ---- */
+  --paper:#FBFAF7;
+  --paper-dim:#F3F1E9;
+  --ochre:#C0752A;
+  --ochre-dim:#A25E1D;
+  --caution:#E2A63C;
+  --field:#44613B;
+
+  /* ---- Type ---- */
+  --display:"Plus Jakarta Sans",system-ui,sans-serif;
+  --body:"Inter",system-ui,sans-serif;
+  --mono:"Inter",system-ui,sans-serif;
+
+  /* ---- Shape ---- */
+  --r-sm:10px;
+  --r-md:16px;
+  --r-lg:24px;
+  --r-pill:999px;
+
+  /* ---- Elevation ---- */
+  --shadow-xs:0 1px 2px rgba(29,34,24,.05);
+  --shadow-sm:0 2px 6px rgba(29,34,24,.05),0 14px 32px -18px rgba(29,34,24,.16);
+  --shadow-md:0 4px 12px rgba(29,34,24,.06),0 28px 56px -24px rgba(29,34,24,.26);
+  --ring:0 0 0 4px rgba(192,117,42,.16);
+}
+
+/* ---------- Reset & base ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+img,svg{display:block;max-width:100%}
+a{color:inherit}
+ul{list-style:none}
+button{font:inherit;cursor:pointer}
+
+h1,h2,h3,h4{
+  font-family:var(--display);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  line-height:1.12;
+  text-wrap:balance;
+}
+
+a:focus-visible,button:focus-visible,input:focus-visible,
+textarea:focus-visible,select:focus-visible,summary:focus-visible,
+[tabindex]:focus-visible{
+  outline:none;
+  box-shadow:var(--ring);
+  border-radius:var(--r-sm);
+}
+
+::selection{background:var(--brand-soft);color:var(--brand-strong)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+
+/* ---------- Eyebrow label ---------- */
+.eyebrow{
+  display:inline-flex;align-items:center;gap:9px;
+  font-size:.74rem;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--brand-strong);margin-bottom:16px;
+}
+.eyebrow::before{
+  content:"";width:22px;height:2px;border-radius:2px;background:var(--brand);
+}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--display);font-size:.88rem;font-weight:600;
+  letter-spacing:.005em;text-decoration:none;white-space:nowrap;
+  padding:13px 26px;border-radius:var(--r-pill);
+  border:1.5px solid var(--line-strong);
+  color:var(--ink);background:var(--surface);
+  box-shadow:var(--shadow-xs);
+  transition:background .18s ease,color .18s ease,border-color .18s ease,
+             box-shadow .18s ease,transform .18s ease;
+}
+.btn:hover{border-color:var(--ink);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn:active{transform:none}
+.btn-solid{
+  background:var(--brand);border-color:var(--brand);color:var(--white);
+  box-shadow:0 2px 6px rgba(162,94,29,.28),0 14px 30px -14px rgba(162,94,29,.5);
+}
+.btn-solid:hover{background:var(--brand-strong);border-color:var(--brand-strong);color:var(--white)}
+.btn-inv{background:transparent;border-color:rgba(255,255,255,.45);color:var(--white);box-shadow:none}
+.btn-inv:hover{background:var(--white);border-color:var(--white);color:var(--ink)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--muted);box-shadow:none}
+.btn-ghost:hover{background:var(--bg-alt);border-color:transparent;color:var(--ink);box-shadow:none;transform:none}
+.btn-danger{background:transparent;border-color:rgba(172,65,48,.35);color:var(--danger);box-shadow:none}
+.btn-danger:hover{background:var(--danger);border-color:var(--danger);color:var(--white)}
+.btn-sm{padding:8px 16px;font-size:.78rem}
+.btn .arr{transition:transform .18s ease}
+.btn:hover .arr{transform:translateX(4px)}
+
+/* ---------- Form fields ---------- */
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{
+  font-size:.78rem;font-weight:600;color:var(--ink);
+  letter-spacing:.01em;
+}
+.field label .opt,.field label span{font-weight:500;color:var(--muted)}
+.field .req{color:var(--brand)}
+input,textarea,select{
+  font-family:var(--body);font-size:.93rem;color:var(--ink);
+  padding:12px 15px;border:1.5px solid var(--line-strong);
+  background:var(--surface);border-radius:var(--r-sm);
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+input::placeholder,textarea::placeholder{color:#A6AB9D}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--brand);outline:none;box-shadow:var(--ring);
+}
+textarea{resize:vertical;min-height:110px}
+select{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236C7263' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;
+  padding-right:38px;
+}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.fhelp{font-size:.78rem;color:var(--muted)}
+
+/* ---------- Chips / badges ---------- */
+.chip,.tag{
+  display:inline-flex;align-items:center;
+  font-size:.72rem;font-weight:600;letter-spacing:.02em;
+  text-transform:capitalize;white-space:nowrap;
+  padding:4px 12px;border-radius:var(--r-pill);
+  background:var(--bg-alt);color:var(--muted);
+}
+.chip.agriculture{background:var(--green-soft);color:var(--green)}
+.chip.construction{background:var(--steel-soft);color:var(--steel)}
+.chip.mining{background:var(--earth-soft);color:var(--earth)}
+.chip.new{background:var(--brand);color:var(--white)}
+.chip.contacted{background:var(--steel-soft);color:var(--steel)}
+.chip.closed{background:var(--bg-alt);color:var(--muted)}
+.chip.newsletter{background:var(--green-soft);color:var(--green)}
+.chip.contact{background:var(--brand-soft);color:var(--brand-strong)}
+
+@media (max-width:720px){
+  .row-2,.row-3{grid-template-columns:1fr}
+  .wrap{padding:0 20px}
+  /* 16px inputs stop iOS Safari from auto-zooming the page on focus */
+  input,textarea,select{font-size:16px}
+  .btn{padding:12px 22px}
+}

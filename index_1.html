@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EthioTractors — Agriculture, Construction &amp; Mining Machinery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#181B18;
+    --paper:#F1EDE2;
+    --paper-dim:#E7E1D2;
+    --ochre:#C1782E;
+    --ochre-dim:#9C5F24;
+    --field:#33462C;
+    --steel:#48555E;
+    --steel-dim:#333E45;
+    --caution:#E4A93A;
+    --line: rgba(24,27,24,0.14);
+    --line-strong: rgba(24,27,24,0.28);
+    --white:#FBFAF6;
+    --radius:2px;
+    --display: "Big Shoulders Display", sans-serif;
+    --body: "IBM Plex Sans", sans-serif;
+    --mono: "IBM Plex Mono", monospace;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  img,svg{display:block; max-width:100%;}
+  a{color:inherit;}
+  ul{list-style:none;}
+
+  h1,h2,h3,h4{
+    font-family:var(--display);
+    font-weight:800;
+    letter-spacing:0.01em;
+    text-transform:uppercase;
+    line-height:0.98;
+  }
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:0.72rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ochre-dim);
+  }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 28px;
+  }
+
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+    outline:2px solid var(--ochre);
+    outline-offset:3px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    position:sticky; top:0; z-index:100;
+    background:rgba(241,237,226,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-row{
+    display:flex; align-items:center; justify-content:space-between;
+    height:76px;
+  }
+  .logo{
+    font-family:var(--display);
+    font-size:1.5rem;
+    font-weight:800;
+    letter-spacing:0.02em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .logo .dot{color:var(--ochre);}
+  .logo-mark{
+    width:30px; height:30px;
+    flex:none;
+  }
+  nav ul{display:flex; gap:30px; align-items:center;}
+  nav a{
+    font-size:0.86rem;
+    font-weight:500;
+    text-decoration:none;
+    letter-spacing:0.01em;
+    position:relative;
+    padding:6px 0;
+  }
+  nav a::after{
+    content:"";
+    position:absolute; left:0; bottom:0;
+    width:0; height:2px;
+    background:var(--ochre);
+    transition:width .2s ease;
+  }
+  nav a:hover::after{width:100%;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono);
+    font-size:0.78rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    text-decoration:none;
+    padding:12px 20px;
+    border:1.5px solid var(--ink);
+    color:var(--ink);
+    background:transparent;
+    cursor:pointer;
+    transition:background .18s ease, color .18s ease;
+  }
+  .btn:hover{background:var(--ink); color:var(--paper);}
+  .btn-solid{
+    background:var(--ochre); border-color:var(--ochre); color:var(--white);
+  }
+  .btn-solid:hover{background:var(--ochre-dim); border-color:var(--ochre-dim); color:var(--white);}
+  .menu-toggle{display:none; background:none; border:none; cursor:pointer;}
+  .menu-toggle svg{width:26px; height:26px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    min-height:640px;
+    display:flex; align-items:stretch;
+    overflow:hidden;
+    border-bottom:1px solid var(--line-strong);
+  }
+  .hero-half{
+    flex:1;
+    position:relative;
+    display:flex; flex-direction:column; justify-content:flex-end;
+    padding:48px;
+    min-height:640px;
+    transition:flex-grow .45s cubic-bezier(.2,.8,.2,1);
+  }
+  .hero-field{
+    background:
+      linear-gradient(180deg, rgba(24,27,24,0.08), rgba(24,27,24,0.55)),
+      repeating-linear-gradient(115deg, #C1782E 0 34px, #B06E29 34px 68px, #99601F 68px 100px);
+    clip-path: polygon(0 0, 100% 0, 88% 100%, 0% 100%);
+    margin-right:-14%;
+    color:var(--white);
+  }
+  .hero-site{
+    background:
+      linear-gradient(180deg, rgba(20,24,26,0.1), rgba(20,24,26,0.62)),
+      repeating-linear-gradient(65deg, #48555E 0 30px, #3D484F 30px 60px, #333E45 60px 88px);
+    clip-path: polygon(12% 0, 100% 0, 100% 100%, 0% 100%);
+    color:var(--white);
+  }
+  .hero-half:hover{flex-grow:1.25;}
+  .hero-tag{
+    font-family:var(--mono);
+    font-size:0.75rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    opacity:0.85;
+    margin-bottom:10px;
+  }
+  .hero-half h2{
+    font-size:clamp(1.7rem, 3.4vw, 2.6rem);
+    color:var(--white);
+    margin-bottom:14px;
+  }
+  .hero-half p{
+    max-width:360px;
+    font-size:0.95rem;
+    opacity:0.9;
+    margin-bottom:22px;
+  }
+  .hero-half .btn{border-color:var(--white); color:var(--white);}
+  .hero-half .btn:hover{background:var(--white); color:var(--ink);}
+
+  .hero-center{
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    z-index:5;
+    text-align:center;
+    pointer-events:none;
+  }
+  .hero-center .brand{
+    font-family:var(--display);
+    font-size:clamp(2.4rem, 6vw, 4.6rem);
+    color:var(--white);
+    text-shadow:0 2px 24px rgba(0,0,0,0.35);
+    letter-spacing:0.01em;
+  }
+  .hero-center .brand span{color:var(--caution);}
+  .hero-center .sub{
+    font-family:var(--mono);
+    color:var(--white);
+    font-size:0.8rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin-top:6px;
+    text-shadow:0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  /* ---------- TRUST / PARTNER STRIP ---------- */
+  .partner-strip{
+    background:var(--ink);
+    color:var(--paper);
+    padding:22px 0;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .partner-strip .wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:16px;
+  }
+  .partner-strip .label{
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.12em;
+    text-transform:uppercase; opacity:0.6; flex:none;
+  }
+  .partner-logos{display:flex; gap:40px; align-items:center; flex-wrap:wrap;}
+  .partner-logos .pname{
+    font-family:var(--display); font-size:1.15rem; letter-spacing:0.03em;
+  }
+  .partner-logos .pname small{
+    display:block; font-family:var(--mono); font-size:0.62rem;
+    text-transform:uppercase; letter-spacing:0.1em; opacity:0.55; font-weight:400;
+  }
+
+  /* ---------- SECTION SCAFFOLD ---------- */
+  section{padding:96px 0;}
+  .section-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    gap:24px; margin-bottom:48px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line-strong);
+    padding-bottom:24px;
+  }
+  .section-head h2{font-size:clamp(1.8rem,3.6vw,2.7rem);}
+  .section-head p{max-width:420px; font-size:0.92rem; color:#3c3f3a;}
+
+  /* Industries tiles */
+  .tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line-strong); border:1px solid var(--line-strong);}
+  .tile{
+    background:var(--white);
+    padding:40px 32px;
+    min-height:280px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    text-decoration:none; color:var(--ink);
+    transition:background .2s ease;
+  }
+  .tile:hover{background:var(--paper-dim);}
+  .tile .num{font-family:var(--mono); font-size:0.75rem; color:var(--ochre-dim);}
+  .tile h3{font-size:1.5rem; margin:18px 0 10px;}
+  .tile p{font-size:0.88rem; color:#4a4d47; margin-bottom:18px;}
+  .tile .go{font-family:var(--mono); font-size:0.76rem; text-transform:uppercase; letter-spacing:0.08em;}
+  .tile svg{width:46px; height:46px; stroke:var(--ochre-dim);}
+
+  /* Tabs */
+  .tabbar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:36px;}
+  .tabbtn{
+    font-family:var(--mono); font-size:0.76rem; text-transform:uppercase; letter-spacing:0.06em;
+    padding:10px 16px; border:1px solid var(--line-strong); background:transparent; cursor:pointer; color:var(--ink);
+  }
+  .tabbtn.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+
+  /* Product cards */
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
+  .grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:22px;}
+  .pcard{
+    background:var(--white);
+    border:1px solid var(--line-strong);
+    display:flex; flex-direction:column;
+  }
+  .pcard .art{
+    height:150px;
+    display:flex; align-items:center; justify-content:center;
+    border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(135deg, rgba(24,27,24,0.035) 0 10px, transparent 10px 20px);
+  }
+  .pcard .art svg{width:78px; height:78px; stroke:var(--ink); opacity:0.82;}
+  .pcard .body{padding:20px 22px 24px; flex:1; display:flex; flex-direction:column;}
+  .pcard h4{font-size:1.05rem; margin-bottom:6px; letter-spacing:0.01em;}
+  .pcard .desc{font-size:0.85rem; color:#4a4d47; margin-bottom:16px; flex:1;}
+  .specs{
+    font-family:var(--mono); font-size:0.74rem;
+    border-top:1px dashed var(--line-strong);
+    padding-top:12px;
+    display:grid; gap:6px;
+  }
+  .specs div{display:flex; justify-content:space-between; gap:10px;}
+  .specs span:first-child{color:#6c6f68;}
+  .pcard .tagrow{margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;}
+  .tag{
+    font-family:var(--mono); font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em;
+    padding:3px 8px; border:1px solid var(--line-strong); color:#4a4d47;
+  }
+  .tag.ag{border-color:var(--field); color:var(--field);}
+  .tag.con{border-color:var(--steel); color:var(--steel);}
+
+  /* Implement mini table (echoes catalog spec sheets) */
+  .impl-table-wrap{border:1px solid var(--line-strong); background:var(--white); overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:0.78rem; min-width:640px;}
+  thead th{
+    text-align:left; background:var(--ink); color:var(--paper);
+    padding:10px 14px; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; font-size:0.68rem;
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--paper-dim);}
+
+  /* Brands section */
+  .brand-cards{display:grid; grid-template-columns:1fr 1fr; gap:22px;}
+  .brand-card{
+    background:var(--ink); color:var(--paper); padding:40px;
+    display:flex; flex-direction:column; justify-content:space-between; min-height:280px;
+  }
+  .brand-card.steel{background:var(--steel-dim);}
+  .brand-card h3{font-size:1.8rem; color:var(--white); margin-bottom:10px;}
+  .brand-card .origin{font-family:var(--mono); font-size:0.72rem; opacity:0.65; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:18px;}
+  .brand-card p{font-size:0.9rem; opacity:0.9; max-width:440px;}
+  .brand-card a{margin-top:24px; font-family:var(--mono); font-size:0.78rem; text-decoration:underline; text-underline-offset:4px; width:fit-content;}
+
+  /* Services / why us */
+  .why-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line-strong); border:1px solid var(--line-strong);}
+  .why-item{background:var(--white); padding:30px 24px;}
+  .why-item .num{font-family:var(--mono); color:var(--ochre-dim); font-size:0.75rem;}
+  .why-item h4{font-size:1.05rem; margin:14px 0 8px; text-transform:none; font-family:var(--body); font-weight:700;}
+  .why-item p{font-size:0.84rem; color:#4a4d47;}
+
+  /* Contact */
+  .contact-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:40px;}
+  .contact-info{background:var(--ink); color:var(--paper); padding:44px;}
+  .contact-info h3{color:var(--white); font-size:1.5rem; margin-bottom:24px;}
+  .contact-info dl{display:grid; gap:20px;}
+  .contact-info dt{font-family:var(--mono); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; opacity:0.6; margin-bottom:4px;}
+  .contact-info dd{font-size:0.95rem;}
+  .placeholder{color:var(--caution);}
+  .contact-info .socials{display:flex; gap:14px; margin-top:30px;}
+  .contact-info .socials a{width:36px; height:36px; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center;}
+  .contact-info .socials svg{width:16px; height:16px; stroke:var(--paper);}
+
+  form{display:flex; flex-direction:column; gap:16px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  label{font-family:var(--mono); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#4a4d47;}
+  input, textarea, select{
+    font-family:var(--body); font-size:0.92rem;
+    padding:12px 14px; border:1px solid var(--line-strong); background:var(--white); color:var(--ink);
+  }
+  textarea{resize:vertical; min-height:100px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  form .btn-solid{align-self:flex-start; margin-top:6px; border:none;}
+  .form-note{font-size:0.78rem; color:#6c6f68; margin-top:-4px;}
+
+  footer{background:var(--ink); color:var(--paper); padding:56px 0 28px;}
+  .footer-top{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:40px; padding-bottom:40px; border-bottom:1px solid rgba(255,255,255,0.12);}
+  .footer-top h5{font-family:var(--mono); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; opacity:0.6; margin-bottom:16px;}
+  .footer-top ul{display:flex; flex-direction:column; gap:10px;}
+  .footer-top a{font-size:0.86rem; text-decoration:none; opacity:0.85;}
+  .footer-top a:hover{opacity:1; text-decoration:underline;}
+  .footer-brand .logo{color:var(--white);}
+  .footer-brand p{font-size:0.85rem; opacity:0.7; margin-top:14px; max-width:280px;}
+  .footer-bottom{display:flex; justify-content:space-between; padding-top:22px; font-family:var(--mono); font-size:0.72rem; opacity:0.55; flex-wrap:wrap; gap:10px;}
+
+  @media (max-width: 940px){
+    .tiles, .grid-3, .why-grid{grid-template-columns:1fr 1fr;}
+    .brand-cards, .contact-grid, .footer-top{grid-template-columns:1fr;}
+  }
+  @media (max-width: 720px){
+    nav{position:fixed; inset:76px 0 0 0; background:var(--paper); padding:30px 28px; display:none; flex-direction:column; align-items:flex-start; gap:24px; overflow-y:auto;}
+    nav.open{display:flex;}
+    nav ul{flex-direction:column; align-items:flex-start; gap:20px; width:100%;}
+    nav .btn{width:100%; justify-content:center;}
+    .menu-toggle{display:block;}
+    .hero{flex-direction:column; min-height:auto;}
+    .hero-half{min-height:320px; clip-path:none !important; margin:0 !important;}
+    .hero-center{position:static; transform:none; padding:28px 20px;}
+    .tiles, .grid-3, .grid-2, .why-grid{grid-template-columns:1fr;}
+    .row-2{grid-template-columns:1fr;}
+    .section-head{flex-direction:column; align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav-row">
+    <a href="#top" class="logo">
+      <svg class="logo-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 24L11 8L16 16L21 6L30 24" stroke="#C1782E" stroke-width="2.4" stroke-linejoin="round"/>
+      </svg>
+      Ethio<span class="dot">Tractors</span>
+    </a>
+    <button class="menu-toggle" aria-label="Toggle menu" onclick="document.getElementById('mainnav').classList.toggle('open')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <nav id="mainnav">
+      <ul>
+        <li><a href="#industries">Industries</a></li>
+        <li><a href="#agriculture">Agriculture</a></li>
+        <li><a href="#construction">Construction &amp; Mining</a></li>
+        <li><a href="#brands">Brands</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#contact" class="btn btn-solid">Request a Quote</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" style="padding:0;">
+    <a href="#agriculture" class="hero-half hero-field">
+      <div class="hero-tag">01 — The Field</div>
+      <h2>Agriculture</h2>
+      <p>Tractors, harvesters and Doğanlar-built implements engineered for Ethiopian soil.</p>
+      <span class="btn">Explore Agriculture →</span>
+    </a>
+    <a href="#construction" class="hero-half hero-site">
+      <div class="hero-tag">02 — The Site</div>
+      <h2>Construction &amp; Mining</h2>
+      <p>Excavators, loaders, cranes and mining equipment for Ethiopia's growth.</p>
+      <span class="btn">Explore Construction →</span>
+    </a>
+    <div class="hero-center">
+      <div class="brand">ETHIO<span>TRACTORS</span></div>
+      <div class="sub">Imported Machinery · Built for Ethiopia's Work</div>
+    </div>
+  </section>
+
+  <!-- ===================== PARTNER STRIP ===================== -->
+  <div class="partner-strip">
+    <div class="wrap">
+      <span class="label">Authorized Importer &amp; Distributor</span>
+      <div class="partner-logos">
+        <span class="pname">DOĞANLAR<small>Agriculture — Turkey</small></span>
+        <span class="pname">ZOOMLION<small>Heavy Industry — China</small></span>
+        <span class="pname" style="opacity:0.45;">+ More Coming<small>Brand partnerships expanding</small></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== INDUSTRIES ===================== -->
+  <section id="industries">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">What We Move</span>
+          <h2>Three Sectors, One Importer</h2>
+        </div>
+        <p>From breaking soil to breaking ground, EthioTractors sources and supports the machinery Ethiopia's producers and contractors run on.</p>
+      </div>
+
+      <div class="tiles">
+        <a href="#agriculture" class="tile">
+          <svg viewBox="0 0 48 48" fill="none" stroke-width="1.6"><path d="M24 6v20M24 26l10-6M24 26l-10-6M14 32c6 4 14 4 20 0M10 40h28"/></svg>
+          <div>
+            <div class="num">01</div>
+            <h3>Agriculture</h3>
+            <p>Tractors, harvesters, ploughs, harrows, cultivators and rotovators.</p>
+          </div>
+          <span class="go">View products →</span>
+        </a>
+        <a href="#construction" class="tile">
+          <svg viewBox="0 0 48 48" fill="none" stroke-width="1.6"><path d="M6 40h36M12 40V22l10-8v26M22 14l12 6v20M30 24h8v16"/></svg>
+          <div>
+            <div class="num">02</div>
+            <h3>Construction</h3>
+            <p>Excavators, loaders, bulldozers, cranes and foundation equipment.</p>
+          </div>
+          <span class="go">View products →</span>
+        </a>
+        <a href="#construction" class="tile" onclick="showConTab('mining')">
+          <svg viewBox="0 0 48 48" fill="none" stroke-width="1.6"><path d="M6 38l10-16 8 10 6-8 12 14M6 38h36"/></svg>
+          <div>
+            <div class="num">03</div>
+            <h3>Mining</h3>
+            <p>Dump trucks, drill rigs, crushers &amp; screens, and rope shovels.</p>
+          </div>
+          <span class="go">View products →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== AGRICULTURE ===================== -->
+  <section id="agriculture" style="background:var(--paper-dim);">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Sector 01</span>
+          <h2>Agriculture Machinery</h2>
+        </div>
+        <p>Power from Zoomlion's tractor and harvester range, paired with Doğanlar's Turkish-built tillage implements — matched to the job, not just the tractor.</p>
+      </div>
+
+      <div class="tabbar">
+        <button class="tabbtn active" onclick="showTab(event,'ag-tractors')">Tractors &amp; Harvesters</button>
+        <button class="tabbtn" onclick="showTab(event,'ag-plough')">Ploughs</button>
+        <button class="tabbtn" onclick="showTab(event,'ag-tillage')">Chisels &amp; Harrows</button>
+        <button class="tabbtn" onclick="showTab(event,'ag-finish')">Cultivators, Tillers &amp; Rotovators</button>
+      </div>
+
+      <!-- Tractors & Harvesters -->
+      <div class="tabpanel active" id="ag-tractors">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><circle cx="18" cy="46" r="9"/><circle cx="46" cy="46" r="6"/><path d="M18 37V22h14l8 15M18 22h-6"/></svg></div>
+            <div class="body">
+              <h4>Zoomlion Tractors</h4>
+              <p class="desc">Row-crop and utility tractors sized for smallholder plots up to commercial farm operations.</p>
+              <div class="tagrow"><span class="tag ag">Zoomlion</span><span class="tag">Power Unit</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="8" y="30" width="26" height="14" rx="2"/><circle cx="16" cy="48" r="6"/><circle cx="30" cy="48" r="6"/><path d="M34 34h14l6 8v6H34"/></svg></div>
+            <div class="body">
+              <h4>Combine Harvester</h4>
+              <p class="desc">Grain harvesting with integrated threshing and cleaning for cereal crops.</p>
+              <div class="tagrow"><span class="tag ag">Zoomlion</span><span class="tag">Harvest</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="10" y="28" width="30" height="16" rx="2"/><circle cx="18" cy="48" r="6"/><circle cx="34" cy="48" r="6"/><path d="M40 32h12v12H40"/></svg></div>
+            <div class="body">
+              <h4>Sugarcane Harvester</h4>
+              <p class="desc">Purpose-built cane cutting and billeting for large-scale plantation operations.</p>
+              <div class="tagrow"><span class="tag ag">Zoomlion</span><span class="tag">Harvest</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="14" y="20" width="24" height="24" rx="2"/><path d="M14 28h24M14 36h24"/><circle cx="46" cy="46" r="6"/><circle cx="18" cy="46" r="6"/></svg></div>
+            <div class="body">
+              <h4>Baler</h4>
+              <p class="desc">Compresses hay or straw into transportable, storable bales after harvest.</p>
+              <div class="tagrow"><span class="tag ag">Zoomlion</span><span class="tag">Post-Harvest</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="12" y="14" width="40" height="30" rx="2"/><path d="M20 44v6h24v-6M22 22h20M22 30h20M22 38h20"/></svg></div>
+            <div class="body">
+              <h4>Grain Dryer</h4>
+              <p class="desc">Reduces post-harvest moisture loss and supports safe long-term grain storage.</p>
+              <div class="tagrow"><span class="tag ag">Zoomlion</span><span class="tag">Post-Harvest</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M12 44h40M18 44V20l8-6 8 6v24M34 44V26h8l6 6v12"/></svg></div>
+            <div class="body">
+              <h4>Full Line Available</h4>
+              <p class="desc">Full Zoomlion agricultural specification sheets and pricing available on request.</p>
+              <div class="tagrow"><span class="tag">Ask Us</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ploughs -->
+      <div class="tabpanel" id="ag-plough">
+        <div class="grid-2" style="margin-bottom:22px;">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M6 20h20l30 10M12 26l6 14 6-12 6 10 6-8"/></svg></div>
+            <div class="body">
+              <h4>Gas-Safe Reversible Plough</h4>
+              <p class="desc">Hydraulic-piston escape mechanism lets each body clear rocky ground without damage — 4 to 6 bodies, adjustable 12"–18" working width.</p>
+              <div class="specs">
+                <div><span>Bodies</span><span>4 / 5 / 6</span></div>
+                <div><span>Weight</span><span>940 – 1120 kg</span></div>
+                <div><span>Power req.</span><span>110 – 250 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span><span class="tag">140×120 Profile</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M6 20h18l32 10M12 26l6 14 6-12 6 10 6-8"/></svg></div>
+            <div class="body">
+              <h4>Spring Profile Plough</h4>
+              <p class="desc">Independent spring-body protection with hydraulic working-width adjustment — built for 3 to 5 body configurations.</p>
+              <div class="specs">
+                <div><span>Bodies</span><span>3 / 4 / 5</span></div>
+                <div><span>Weight</span><span>600 – 995 kg</span></div>
+                <div><span>Power req.</span><span>45 – 130 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span><span class="tag">100–140 Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="impl-table-wrap">
+          <table>
+            <thead><tr><th>Model</th><th>Bodies</th><th>Blade (in)</th><th>Weight (kg)</th><th>Power (hp)</th></tr></thead>
+            <tbody>
+              <tr><td>Gas-Safe Reversible Plough</td><td>4–6</td><td>16</td><td>940 – 1120</td><td>110 – 250</td></tr>
+              <tr><td>Gas Safe Plough</td><td>4–6</td><td>16</td><td>1420 – 1840</td><td>110 – 250</td></tr>
+              <tr><td>Spring Profile Plough</td><td>3–5</td><td>10–14</td><td>600 – 995</td><td>45 – 130</td></tr>
+              <tr><td>Rotary Spring Profile Plough</td><td>4–5</td><td>12–14</td><td>1315 – 1550</td><td>85 – 165</td></tr>
+              <tr><td>Pin Cutting Plough</td><td>4–7</td><td>12–16</td><td>685 – 1782</td><td>80 – 245</td></tr>
+              <tr><td>Rotary Mounted Pin Cutting Plough</td><td>2–5</td><td>12–16</td><td>750 – 1355</td><td>65 – 175</td></tr>
+              <tr><td>Standard Plough</td><td>2–6</td><td>8–16</td><td>160 – 795</td><td>30 – 130</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Chisels & Harrows -->
+      <div class="tabpanel" id="ag-tillage">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 20h48M14 20v14l4 10M24 20v14l4 10M34 20v14l4 10M44 20v14l4 10"/></svg></div>
+            <div class="body">
+              <h4>Spring Chisel</h4>
+              <p class="desc">Breaks up hardpan without inverting the soil layer. Independent spring tines deflect off rock and reset automatically.</p>
+              <div class="specs">
+                <div><span>Feet</span><span>5 – 11</span></div>
+                <div><span>Depth</span><span>375 – 450 mm</span></div>
+                <div><span>Power req.</span><span>50 – 140 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 22h48M14 22v20M24 22v20M34 22v20M44 22v20"/></svg></div>
+            <div class="body">
+              <h4>Pin Cutting Chisel — Field / Garden</h4>
+              <p class="desc">Heat-treated pin-and-clamp assemblies for stubble and deep tillage in both open-field and orchard/vineyard rows.</p>
+              <div class="specs">
+                <div><span>Feet</span><span>7 – 11</span></div>
+                <div><span>Depth</span><span>250 – 450 mm</span></div>
+                <div><span>Power req.</span><span>45 – 130 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><circle cx="16" cy="34" r="8"/><circle cx="30" cy="34" r="8"/><circle cx="44" cy="34" r="8"/></svg></div>
+            <div class="body">
+              <h4>Disc Harrow</h4>
+              <p class="desc">Suspension-mounted discs with 51, 56 or 61-disc configurations for seedbed prep, residue cutting and post-harvest tillage.</p>
+              <div class="specs">
+                <div><span>Discs</span><span>16 – 32</span></div>
+                <div><span>Depth</span><span>225 – 250 mm</span></div>
+                <div><span>Power req.</span><span>45 – 180 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cultivators, Tillers, Rotovators -->
+      <div class="tabpanel" id="ag-finish">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M10 20h44M16 20v10l4 14M28 20v10l4 14M40 20v10l4 14"/></svg></div>
+            <div class="body">
+              <h4>Spring Cultivator</h4>
+              <p class="desc">Loosens and aerates soil, cuts weed roots, and inter-cultivates row crops like maize, potato and sunflower.</p>
+              <div class="specs">
+                <div><span>Feet</span><span>7 – 22</span></div>
+                <div><span>Depth</span><span>175 – 250 mm</span></div>
+                <div><span>Power req.</span><span>40 – 200 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="10" y="26" width="44" height="10"/><path d="M14 36l4 10M24 36l4 10M34 36l4 10M44 36l4 10"/></svg></div>
+            <div class="body">
+              <h4>Tiller / Scissor Spring Tiller</h4>
+              <p class="desc">Final seedbed preparation before planting — self-vibrating spring mechanism levels the field in one pass.</p>
+              <div class="specs">
+                <div><span>Width</span><span>21 – 40 ft</span></div>
+                <div><span>Power req.</span><span>50 – 140 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="10" y="24" width="44" height="12" rx="2"/><path d="M16 36v6M24 36v6M32 36v6M40 36v6M48 36v6"/></svg></div>
+            <div class="body">
+              <h4>Rotovator — Field / Garden / Vertical</h4>
+              <p class="desc">Mixes and breaks down soil, weeds and residue into organic matter. Field, garden and vertical-tine configurations available.</p>
+              <div class="specs">
+                <div><span>Width</span><span>160 – 400 mm</span></div>
+                <div><span>Power req.</span><span>45 – 180 hp</span></div>
+              </div>
+              <div class="tagrow"><span class="tag ag">Doğanlar</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="form-note" style="margin-top:26px;">Specifications summarized from the Doğanlar Agriculture product catalogue. Full code sheets, weights and per-model pricing available as a downloadable PDF on request.</p>
+    </div>
+  </section>
+
+  <!-- ===================== CONSTRUCTION & MINING ===================== -->
+  <section id="construction">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Sector 02 &amp; 03</span>
+          <h2>Construction &amp; Mining Machinery</h2>
+        </div>
+        <p>Zoomlion earthmoving, foundation, hoisting and mining equipment — sized from small-site excavators to large-scale mine haulage.</p>
+      </div>
+
+      <div class="tabbar">
+        <button class="tabbtn active" data-con onclick="showConTab('earth')">Earthmoving</button>
+        <button class="tabbtn" data-con onclick="showConTab('cranes')">Cranes &amp; Hoisting</button>
+        <button class="tabbtn" data-con onclick="showConTab('foundation')">Foundation &amp; Concrete</button>
+        <button class="tabbtn" data-con onclick="showConTab('mining')">Mining</button>
+      </div>
+
+      <div class="tabpanel active" id="earth">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="10" y="30" width="16" height="12" rx="2"/><path d="M26 34h10l10-14 6 2-6 16H26"/><circle cx="16" cy="46" r="5"/><circle cx="34" cy="46" r="5"/></svg></div>
+            <div class="body">
+              <h4>Excavators</h4>
+              <p class="desc">Mini, small, medium, large, and wheeled excavators for sites of every scale.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Earthmoving</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 40h40M14 40V26h20l8 8v6M20 26v-6h10v6"/><circle cx="20" cy="46" r="4"/><circle cx="40" cy="46" r="4"/></svg></div>
+            <div class="body">
+              <h4>Wheel &amp; Crawler Loaders</h4>
+              <p class="desc">Skid steer, crawler, wheel and compact track loaders for material handling and site prep.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Earthmoving</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 44h30l10-8h4M18 44V30h16v14"/><circle cx="16" cy="50" r="4"/><circle cx="34" cy="50" r="4"/></svg></div>
+            <div class="body">
+              <h4>Crawler Bulldozer</h4>
+              <p class="desc">Heavy blade grading and earthmoving for road building and site clearance.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Earthmoving</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="cranes">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M12 48V16h4M16 20h30M40 20v10l6 4"/><circle cx="16" cy="52" r="4"/><circle cx="26" cy="52" r="4"/></svg></div>
+            <div class="body">
+              <h4>Truck &amp; Crawler Cranes</h4>
+              <p class="desc">Truck, rough terrain, all terrain and crawler cranes for lifting and placement.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Mobile Crane</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M16 54V10M16 14h34M42 14l6 6M16 22h20"/></svg></div>
+            <div class="body">
+              <h4>Flat-Top &amp; Luffing Jib Tower Cranes</h4>
+              <p class="desc">Fixed-site vertical lift for multi-storey construction projects.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Hoisting</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="24" y="8" width="10" height="48" rx="2"/><rect x="18" y="52" width="22" height="6"/></svg></div>
+            <div class="body">
+              <h4>Construction Hoist</h4>
+              <p class="desc">Personnel and material lifts for high-rise site logistics.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Hoisting</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="foundation">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M28 6v40M20 46h16M24 46l-4 10M32 46l4 10"/></svg></div>
+            <div class="body">
+              <h4>Rotary Drilling Rig</h4>
+              <p class="desc">Bored pile foundation drilling for high-load structures.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Foundation</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="10" y="14" width="30" height="22" rx="2"/><circle cx="18" cy="42" r="4"/><path d="M40 20h12l4 6v6H40"/></svg></div>
+            <div class="body">
+              <h4>Truck Mixer &amp; Pumps</h4>
+              <p class="desc">Truck mixers, truck-mounted pumps, trailer pumps and placing booms.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Concrete</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="8" y="10" width="20" height="30" rx="2"/><rect x="32" y="20" width="20" height="20" rx="2"/></svg></div>
+            <div class="body">
+              <h4>Batching Plant</h4>
+              <p class="desc">On-site or centralized concrete batching for continuous supply.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Concrete</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="mining">
+        <div class="grid-3">
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><rect x="8" y="24" width="28" height="16" rx="2"/><path d="M36 28h12l6 6v6H36"/><circle cx="16" cy="46" r="5"/><circle cx="46" cy="46" r="5"/></svg></div>
+            <div class="body">
+              <h4>Mining Dump Truck</h4>
+              <p class="desc">High-payload haulage built for continuous pit-to-stockpile cycles.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Mining</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 44h20l10-24 4 2-8 22h18"/><circle cx="16" cy="50" r="4"/><circle cx="34" cy="50" r="4"/></svg></div>
+            <div class="body">
+              <h4>Large Excavator</h4>
+              <p class="desc">Mine-class excavators for overburden removal and bulk material loading.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Mining</span></div>
+            </div>
+          </div>
+          <div class="pcard">
+            <div class="art"><svg viewBox="0 0 64 64" fill="none" stroke-width="1.6"><path d="M8 40l8-20h8l-6 20M28 40l8-20h8l-6 20M8 40h44"/></svg></div>
+            <div class="body">
+              <h4>Mobile Crushers &amp; Screens</h4>
+              <p class="desc">On-site crushing and screening, plus fixed crushers and surface DTH drill rigs.</p>
+              <div class="tagrow"><span class="tag con">Zoomlion</span><span class="tag">Mining</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="form-note" style="margin-top:26px;">Full Zoomlion range spans mini excavators to large mining-class machines. Ask us for the model matched to your site conditions and budget.</p>
+    </div>
+  </section>
+
+  <!-- ===================== BRANDS ===================== -->
+  <section id="brands" style="background:var(--paper-dim);">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Who We Represent</span>
+          <h2>Brands We Import</h2>
+        </div>
+      </div>
+      <div class="brand-cards">
+        <div class="brand-card">
+          <div>
+            <div class="origin">Turkey — Est. Agricultural Manufacturer</div>
+            <h3>Doğanlar Agriculture</h3>
+            <p>Nearly half a century of tillage-equipment manufacturing: ploughs, chisels, disc harrows, cultivators, tillers and rotovators, engineered and heat-treated for demanding soil conditions.</p>
+          </div>
+          <a href="https://www.doganlartarim.com.tr" target="_blank" rel="noopener">doganlartarim.com.tr ↗</a>
+        </div>
+        <div class="brand-card steel">
+          <div>
+            <div class="origin">China — Global Heavy Industry Manufacturer</div>
+            <h3>Zoomlion</h3>
+            <p>Earthmoving, mobile crane, construction hoisting, concrete, foundation, mining and agricultural machinery, backed by a global service and parts network.</p>
+          </div>
+          <a href="https://en.zoomlion.com" target="_blank" rel="noopener">en.zoomlion.com ↗</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SERVICES / WHY US ===================== -->
+  <section id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Beyond the Machine</span>
+          <h2>Why EthioTractors</h2>
+        </div>
+        <p>Importing the equipment is the easy part. Getting it running, and keeping it running, is where we stay involved.</p>
+      </div>
+      <div class="why-grid">
+        <div class="why-item">
+          <div class="num">01</div>
+          <h4>Pre-Purchase Advisory</h4>
+          <p>We help you match machine to job — soil type, site conditions, budget and expected utilization.</p>
+        </div>
+        <div class="why-item">
+          <div class="num">02</div>
+          <h4>Installation &amp; Commissioning</h4>
+          <p>On-site assembly and commissioning for tractors, implements and heavy equipment.</p>
+        </div>
+        <div class="why-item">
+          <div class="num">03</div>
+          <h4>Parts &amp; After-Sales</h4>
+          <p>Genuine spare parts sourcing and after-sales technical support from our service team.</p>
+        </div>
+        <div class="why-item">
+          <div class="num">04</div>
+          <h4>Nationwide Delivery</h4>
+          <p>Coordinated delivery to farms, construction sites and mining operations across Ethiopia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CONTACT ===================== -->
+  <section id="contact" style="background:var(--paper-dim);">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Get In Touch</span>
+          <h2>Request a Quote</h2>
+        </div>
+        <p>Tell us what you're moving, planting or building, and which machine you're after — we'll follow up with pricing and availability.</p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="contact-info">
+          <h3>EthioTractors PLC</h3>
+          <dl>
+            <div>
+              <dt>Head Office</dt>
+              <dd class="placeholder">[Street Address, Sub-city, Addis Ababa, Ethiopia]</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd><a href="tel:0921692915">0921692915</a></dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd class="placeholder">[info@ethiotractors.com]</dd>
+            </div>
+            <div>
+              <dt>Branches</dt>
+              <dd class="placeholder">[Branch City], [Branch City], [Branch City]</dd>
+            </div>
+            <div>
+              <dt>Hours</dt>
+              <dd class="placeholder">[Mon–Sat, __:__ – __:__]</dd>
+            </div>
+          </dl>
+          <div class="socials">
+            <a href="#" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M21 4L2 11l6 2 2 6 3-4 5 3z"/></svg></a>
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M15 4h-2a4 4 0 00-4 4v3H7v4h2v6h4v-6h3l1-4h-4V8a1 1 0 011-1h3z"/></svg></a>
+            <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 10v7M7 7v.01M12 17v-4a2 2 0 014 0v4M12 13v4"/></svg></a>
+          </div>
+        </div>
+
+        <form>
+          <div class="row-2">
+            <div class="field">
+              <label for="name">Full Name</label>
+              <input id="name" type="text" placeholder="Your name" required>
+            </div>
+            <div class="field">
+              <label for="company">Company / Farm</label>
+              <input id="company" type="text" placeholder="Optional">
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="phone">Phone</label>
+              <input id="phone" type="tel" placeholder="+251 ...">
+            </div>
+            <div class="field">
+              <label for="industry">Industry</label>
+              <select id="industry">
+                <option>Agriculture</option>
+                <option>Construction</option>
+                <option>Mining</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="interest">Product of Interest</label>
+            <input id="interest" type="text" placeholder="e.g. Gas-Safe Reversible Plough, Excavator, Mining Dump Truck">
+          </div>
+          <div class="field">
+            <label for="message">Message</label>
+            <textarea id="message" placeholder="Tell us about your site, farm size, or project"></textarea>
+          </div>
+          <button type="submit" class="btn btn-solid">Send Inquiry →</button>
+          <p class="form-note">This form is a static template — connect it to an email service or backend endpoint before launch.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="logo">Ethio<span class="dot" style="color:var(--ochre);">Tractors</span></div>
+        <p>Importing agriculture, construction and mining machinery for Ethiopia — from field to foundation.</p>
+      </div>
+      <div>
+        <h5>Sectors</h5>
+        <ul>
+          <li><a href="#agriculture">Agriculture</a></li>
+          <li><a href="#construction">Construction</a></li>
+          <li><a href="#construction">Mining</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#brands">Brands</a></li>
+          <li><a href="#services">Services</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Brands</h5>
+        <ul>
+          <li><a href="https://www.doganlartarim.com.tr" target="_blank" rel="noopener">Doğanlar Agriculture ↗</a></li>
+          <li><a href="https://en.zoomlion.com" target="_blank" rel="noopener">Zoomlion ↗</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 EthioTractors PLC. All rights reserved.</span>
+      <span class="placeholder">[Trade License No. ___] · Addis Ababa, Ethiopia</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function showTab(evt, id){
+    const panelGroup = document.getElementById(id).parentElement;
+    panelGroup.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    evt.currentTarget.parentElement.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+    evt.currentTarget.classList.add('active');
+  }
+
+  function showConTab(id){
+    document.querySelectorAll('#construction .tabpanel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('#construction .tabbtn[data-con]').forEach(b => b.classList.remove('active'));
+    const idx = ['earth','cranes','foundation','mining'].indexOf(id);
+    const btns = document.querySelectorAll('#construction .tabbtn[data-con]');
+    if(btns[idx]) btns[idx].classList.add('active');
+  }
+
+  // close mobile nav on link click
+  document.querySelectorAll('#mainnav a').forEach(a => {
+    a.addEventListener('click', () => document.getElementById('mainnav').classList.remove('open'));
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+.git
+.claude
+data/*.sqlite
+data/*.sqlite-*
+uploads/*
+!uploads/.htaccess
+*.md

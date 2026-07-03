@@ -1,0 +1,6 @@
+DirectoryIndex index.php
+
+# Block direct access to SQLite backups if any leak into web root
+<FilesMatch "\.(sqlite|sqlite3|db)$">
+Require all denied
+</FilesMatch>

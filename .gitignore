@@ -1,0 +1,13 @@
+# Runtime data (created on first visit)
+/data/*.sqlite
+/data/*.sqlite-*
+
+# User uploads (keep folder + .htaccess)
+/uploads/*
+!/uploads/.htaccess
+
+# Local / editor
+.claude/
+*.log
+.DS_Store
+Thumbs.db
