@@ -111,7 +111,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($s['company_name']) ?> — Agriculture, Construction &amp; Mining Machinery</title>
 <meta name="description" content="Authorized importer and distributor of Doğanlar, Zoomlion and Romsan machinery in Ethiopia — tractors, implements, excavators, cranes, generators, trailers and mining equipment with nationwide delivery and after-sales support.">
-<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="icon" href="assets/logo.png?v=<?= filemtime(__DIR__ . '/assets/logo.png') ?>" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -125,7 +125,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 <header class="site" id="siteHeader">
   <div class="hwrap nav-row">
     <a href="#top" class="logo">
-      <img src="assets/logo-white.png" alt="<?= e($s['company_name']) ?>" class="logo-img" width="68" height="48">
+      <img src="assets/logo-color.png" alt="<?= e($s['company_name']) ?>" class="logo-img" width="55" height="48">
     </a>
     <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -189,7 +189,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     <div class="wrap">
       <div class="ab-grid">
         <div class="ab-media reveal">
-          <img src="https://images.unsplash.com/photo-1580901368919-7738efb0f87e?auto=format&fit=crop&w=1000&q=80" alt="Excavator at work" loading="lazy">
+          <img src="assets/products/zoomlion-excavator.jpg" alt="Excavator at work" loading="lazy">
           <a href="#industries" class="ab-learn">Learn More</a>
         </div>
         <div class="ab-copy reveal">
@@ -661,7 +661,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     </nav>
     <div class="footer-id">
       <div class="footer-roundel" aria-hidden="true">
-        <img src="assets/logo.png" alt="" class="footer-logo-img" width="120" height="120">
+        <img src="assets/logo.png?v=<?= filemtime(__DIR__ . '/assets/logo.png') ?>" alt="" class="footer-logo-img" width="120" height="104">
       </div>
       <div class="footer-addr">
         <div class="f-name"><?= mb_strtoupper(e($s['company_name'])) ?></div>

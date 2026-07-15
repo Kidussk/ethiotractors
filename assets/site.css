@@ -21,6 +21,9 @@ header.site.scrolled{
 header.site.scrolled .nav-row{height:72px}
 .logo{
   display:inline-flex;align-items:center;text-decoration:none;
+  /* The logo is designed on white — a small plate keeps it readable over
+     any banner slide and on the dark scrolled header. */
+  background:var(--white);padding:5px 9px;border-radius:5px;
 }
 .logo-img{
   display:block;height:48px;width:auto;max-width:min(200px,42vw);
@@ -107,7 +110,7 @@ nav.main a:not(.btn).active::after{
 }
 
 /* ---------- About split (photo + copy) ---------- */
-.about-split{padding:130px 0 90px;background:var(--bg)}
+.about-split{padding:80px 0 90px;background:var(--bg)}
 .ab-grid{
   display:grid;grid-template-columns:1fr 1.1fr;gap:70px;align-items:center;
 }

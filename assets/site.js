@@ -68,7 +68,15 @@
         }
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    revealEls.forEach(function (el) { io.observe(el); });
+    revealEls.forEach(function (el) {
+      // Content already on screen shows immediately — the page must never
+      // open with a blank band waiting for a scroll event.
+      if (el.getBoundingClientRect().top < window.innerHeight) {
+        el.classList.add('in');
+      } else {
+        io.observe(el);
+      }
+    });
   } else {
     revealEls.forEach(function (el) { el.classList.add('in'); });
   }

@@ -1,6 +1,12 @@
 # Product image credits
 
-Doğanlar and Romsan product photos are from the manufacturers' own product catalogues, used to represent products EthioTractors distributes.
+Doğanlar and Romsan product photos are from the manufacturers' own product catalogues
+and websites (doganlartarim.com.tr, romsan.com), used to represent products
+EthioTractors distributes:
+
+- doganlar-power-harrow.png, doganlar-vineyard-plough.png, doganlar-garden-cultivator.png — doganlartarim.com.tr
+- romsan-feed-mixer.png, romsan-bale-trailer.jpg, romsan-water-tanker.png,
+  romsan-fire-tanker.png, romsan-service-trailer.jpg — romsan.com
 
 ## Zoomlion — manufacturer product site
 
@@ -23,6 +29,19 @@ Banner art in `assets/hero/` (hero-01/02/03.jpg) comes from the same source.
 - zoomlion-mining-dump-truck.png — ZT165EV mining dump truck
 - zoomlion-mobile-crusher.png — ZMJ116G mobile jaw crusher station
 - zoomlion-dth-drill.png — ZDH138 integrated mining drill
+- zoomlion-scissor-lift.png — ZS0407DC scissor lift
+- zoomlion-artic-boom.png — ZA20J articulating boom lift
+- zoomlion-tele-boom.png — ZT51J telescopic boom lift
+- zoomlion-spider-lift.png — ZX37T spider lift
+- zoomlion-telehandler.png — ZTH4518R telehandler
+- zoomlion-trench-cutter.png — ZC40G trench cutter
+- zoomlion-loader-crane.jpg — ZLK5200V8 knuckle loader crane
+- zoomlion-rice-transplanter.png — G-series rice transplanter
+- zoomlion-tractor-dq-series.png — DQ series hybrid tractor
+- zoomlion-zt118ev.png / zoomlion-zt135g.png / zoomlion-zt125a.png — ZT mining dump trucks
+- zoomlion-impact-crusher.png — ZMI1213G mobile impact crusher
+- zoomlion-cone-crusher.png — ZMC300G mobile cone crusher
+- zoomlion-mobile-screen.png — ZMS2065G mobile screen
 
 ## Zoomlion — Wikimedia Commons
 

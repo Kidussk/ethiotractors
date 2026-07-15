@@ -163,6 +163,148 @@ function et_upgrade_catalog(PDO $pdo): void
         $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '6')
                        ON DUPLICATE KEY UPDATE `value` = '6'")->execute();
     }
+
+    if ($version < 7) {
+        // v7: the two lines dropped in v6 are reinstated, Romsan's power and
+        // logistics lines return to the Power & Logistics sector, and every
+        // sector is stocked with additional manufacturer lines.
+        foreach (et_catalog_v7_sector_moves() as $name) {
+            $pdo->prepare("UPDATE products SET sector = 'power' WHERE name = ?")->execute([$name]);
+        }
+        $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn();
+        et_seed_catalog_v7($pdo, $sort);
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '7')
+                       ON DUPLICATE KEY UPDATE `value` = '7'")->execute();
+    }
+}
+
+/** Romsan lines that belong in Power & Logistics rather than Agriculture (v7). */
+function et_catalog_v7_sector_moves(): array
+{
+    return [
+        'Mobile Generator & NATO Trailer',
+        'Tactical Portable Generator',
+        'Container Type Generator',
+        'Air Cargo Transport Trailer',
+        'Flatbed & Container Shipment Trailer',
+        'Field Living & Utility Containers',
+        'Heavy-Duty LED Trailer Lamps',
+    ];
+}
+
+/**
+ * v7 catalogue additions — manufacturer lines from the Zoomlion product site,
+ * the Doğanlar Tarım catalogue (doganlartarim.com.tr) and the Romsan catalogue
+ * (romsan.com). Also reinstates the two lines removed in v6.
+ */
+function et_seed_catalog_v7(PDO $pdo, int $sortStart): void
+{
+    $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
+    $seed = [
+        // ---- Reinstated ----
+        ['Zoomlion Tractor Series', 'agriculture', 'Tractors', 'Zoomlion',
+            'Row-crop and utility tractors sized for smallholder plots up to commercial farm operations.',
+            $S([]), 'Power Unit', 'tractor', 'assets/products/zoomlion-tractor.jpg'],
+        ['Boat Transport Trailer', 'power', 'Transport Trailers', 'Romsan',
+            'Purpose-built trailer for moving and launching workboats and patrol craft from unprepared shorelines.',
+            $S([['Duty', 'Boat transport & launch'], ['Towing', 'NATO eye']]),
+            'Logistics', 'trailer', ''],
+
+        // ---- Agriculture (Zoomlion) ----
+        ['Rice Transplanter', 'agriculture', 'Planting', 'Zoomlion',
+            'High-speed paddy rice transplanters — G630, G825 and G830 series for wet-field planting.',
+            $S([]), 'Planting', 'machine', 'assets/products/zoomlion-rice-transplanter.png'],
+        ['DQ Series Hybrid Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'Hybrid-power DQ series tractors that pair the diesel engine with electric drive for fuel-saving field work.',
+            $S([]), 'Hybrid', 'tractor', 'assets/products/zoomlion-tractor-dq-series.png'],
+
+        // ---- Agriculture (Doğanlar) ----
+        ['Power Harrow', 'agriculture', 'Chisels & Harrows', 'Doğanlar',
+            'PTO-driven power harrow that crumbles, levels and firms the seedbed in a single pass.',
+            $S([]), 'Seedbed', 'harrow', 'assets/products/doganlar-power-harrow.png'],
+        ['Vineyard & Orchard Plough', 'agriculture', 'Ploughs', 'Doğanlar',
+            'Sliding offset plough for working between vine and orchard rows in light and medium soils.',
+            $S([]), 'Orchard', 'plough', 'assets/products/doganlar-vineyard-plough.png'],
+        ['Garden Type Spring-Loaded Cultivator', 'agriculture', 'Cultivators & Tillers', 'Doğanlar',
+            'Compact spring-tine cultivator sized for orchards, vineyards and garden plots.',
+            $S([]), 'Orchard', 'cultivator', 'assets/products/doganlar-garden-cultivator.png'],
+
+        // ---- Agriculture (Romsan) ----
+        ['Feed Mixer Wagons — YK Series', 'agriculture', 'Feed & Livestock', 'Romsan',
+            'YK 20 – YK 80 feed mixer wagons with PTO or electric drive for daily ration mixing on livestock farms.',
+            $S([]), 'Livestock', 'mixer', 'assets/products/romsan-feed-mixer.png'],
+        ['Bale Transport Trailers', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Flat-platform bale trailers — R130UBM and R150UBM — for moving hay and straw from field to store.',
+            $S([]), 'Haulage', 'trailer', 'assets/products/romsan-bale-trailer.jpg'],
+
+        // ---- Construction (Zoomlion) ----
+        ['Scissor Lifts', 'construction', 'Access Platforms', 'Zoomlion',
+            'Electric slab and rough-terrain scissor lifts for safe working at height on fit-out and maintenance jobs.',
+            $S([]), 'Work at Height', 'hoist', 'assets/products/zoomlion-scissor-lift.png'],
+        ['Articulating Boom Lifts', 'construction', 'Access Platforms', 'Zoomlion',
+            'Up-and-over articulated booms for facades, steelwork and plant maintenance — diesel and electric models.',
+            $S([]), 'Work at Height', 'hoist', 'assets/products/zoomlion-artic-boom.png'],
+        ['Telescopic Boom Lifts', 'construction', 'Access Platforms', 'Zoomlion',
+            'Straight-boom platforms with long horizontal outreach for high steel, glazing and inspection work.',
+            $S([]), 'Work at Height', 'hoist', 'assets/products/zoomlion-tele-boom.png'],
+        ['Spider Lifts', 'construction', 'Access Platforms', 'Zoomlion',
+            'Compact tracked platforms that pass through doorways and work in tight or delicate-floor spaces.',
+            $S([]), 'Work at Height', 'hoist', 'assets/products/zoomlion-spider-lift.png'],
+        ['Telehandlers', 'construction', 'Material Handling', 'Zoomlion',
+            'Telescopic handlers for loading, placing and material logistics around the site.',
+            $S([]), 'Material Handling', 'loader', 'assets/products/zoomlion-telehandler.png'],
+        ['Trench Cutter', 'construction', 'Foundation & Concrete', 'Zoomlion',
+            'Diaphragm-wall trench cutting for deep foundations and cut-off walls.',
+            $S([]), 'Foundation', 'drillrig', 'assets/products/zoomlion-trench-cutter.png'],
+
+        // ---- Mining (Zoomlion) ----
+        ['ZT118EV Electric Mining Dump Truck', 'mining', 'Haulage', 'Zoomlion',
+            'Battery-electric off-highway dump truck for low-emission pit haulage.',
+            $S([]), 'Mining', 'dumptruck', 'assets/products/zoomlion-zt118ev.png'],
+        ['ZT135G Mining Dump Truck', 'mining', 'Haulage', 'Zoomlion',
+            'Off-highway dump truck built for continuous pit-to-stockpile cycles.',
+            $S([]), 'Mining', 'dumptruck', 'assets/products/zoomlion-zt135g.png'],
+        ['ZT125A Mining Dump Truck', 'mining', 'Haulage', 'Zoomlion',
+            'Mechanical-drive mining truck for demanding haul roads and overburden work.',
+            $S([]), 'Mining', 'dumptruck', 'assets/products/zoomlion-zt125a.png'],
+        ['ZMI1213G Mobile Impact Crusher', 'mining', 'Processing', 'Zoomlion',
+            'Track-mounted impact crusher for mid-hard rock and recycling duty.',
+            $S([]), 'Processing', 'crusher', 'assets/products/zoomlion-impact-crusher.png'],
+        ['ZMC300G Mobile Cone Crusher', 'mining', 'Processing', 'Zoomlion',
+            'Track-mounted cone crusher for secondary and tertiary aggregate production.',
+            $S([]), 'Processing', 'crusher', 'assets/products/zoomlion-cone-crusher.png'],
+        ['ZMS2065G Mobile Screen', 'mining', 'Processing', 'Zoomlion',
+            'Track-mounted screening plant for sizing and stockpiling aggregate.',
+            $S([]), 'Processing', 'crusher', 'assets/products/zoomlion-mobile-screen.png'],
+
+        // ---- Power & Logistics ----
+        ['Truck-Mounted Loader Cranes', 'power', 'Truck Loader Cranes', 'Zoomlion',
+            'ZLK knuckle-boom loader cranes mounted on cargo trucks for self-loading transport and delivery work.',
+            $S([]), 'Logistics', 'crane', 'assets/products/zoomlion-loader-crane.jpg'],
+        ['Water Tanker Trailers', 'power', 'Water & Municipal', 'Romsan',
+            'Towed water bowsers in single, tandem and tridem axle configurations for site supply, dust suppression and irrigation support.',
+            $S([]), 'Water Supply', 'trailer', 'assets/products/romsan-water-tanker.png'],
+        ['Fire-Fighting Water Tankers', 'power', 'Water & Municipal', 'Romsan',
+            'SUMA-series tanker trailers with pump and hose equipment for farm, forest and municipal fire response.',
+            $S([]), 'Fire Response', 'trailer', 'assets/products/romsan-fire-tanker.png'],
+        ['Municipal & Farm Service Trailers', 'power', 'Water & Municipal', 'Romsan',
+            'General service trailers for municipal works and farm logistics — water bowl, platform and utility bodies.',
+            $S([]), 'Municipal', 'trailer', 'assets/products/romsan-service-trailer.jpg'],
+    ];
+
+    $exists = $pdo->prepare('SELECT id FROM products WHERE name = ? LIMIT 1');
+    $stmt = $pdo->prepare(
+        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $sort = $sortStart;
+    foreach ($seed as $p) {
+        $exists->execute([$p[0]]);
+        if ($exists->fetchColumn()) {
+            continue;
+        }
+        $stmt->execute([...$p, $sort++]);
+    }
 }
 
 /** Zoomlion photos for the lines that shipped with no image at all (v6). */
@@ -610,9 +752,10 @@ function et_seed_products(PDO $pdo): void
     et_seed_romsan($pdo, count($seed));
     et_seed_romsan_agri($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
     et_seed_zoomlion_tractors($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
+    et_seed_catalog_v7($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
     // Stamp the catalog version so et_upgrade_catalog() never re-runs these steps.
-    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '6')
-                   ON DUPLICATE KEY UPDATE `value` = '6'")->execute();
+    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '7')
+                   ON DUPLICATE KEY UPDATE `value` = '7'")->execute();
 }
 
 /** Romsan Machinery Industry — mobile power, trailers and site containers (catalog v2). */
@@ -620,31 +763,31 @@ function et_seed_romsan(PDO $pdo, int $sortStart): void
 {
     $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
     $seed = [
-        ['Mobile Generator & NATO Trailer', 'agriculture', 'Mobile Power', 'Romsan',
+        ['Mobile Generator & NATO Trailer', 'power', 'Mobile Power', 'Romsan',
             'Trailer-mounted diesel generator sets with NATO-type towing gear — dependable field power that moves with the job.',
             $S([['Output', '5 – 1,000 kVA'], ['Alternator', 'Dual / synchronous'], ['Mount', 'NATO-type trailer']]),
             'Field Power', 'generator', 'assets/products/romsan-mobile-generator.jpg'],
-        ['Tactical Portable Generator', 'agriculture', 'Portable Power', 'Romsan',
+        ['Tactical Portable Generator', 'power', 'Portable Power', 'Romsan',
             'Compact enclosed diesel generators light enough for a crew to hand-carry and position anywhere on site.',
             $S([['Output', '5 / 7.5 / 10 / 33 kVA'], ['Weight', '≤ 300 kg'], ['Handling', 'Hand-carriable']]),
             'Portable', 'generator', 'assets/products/romsan-tactical-generator.jpg'],
-        ['Container Type Generator', 'agriculture', 'Containerised Power', 'Romsan',
+        ['Container Type Generator', 'power', 'Containerised Power', 'Romsan',
             'Containerised generating sets for standby and prime power at plants, camps and remote operations.',
             $S([['Output', '275 – 1,000 kVA'], ['Alternator', 'Dual / synchronous'], ['Format', '20 ft container']]),
             'Standby Power', 'container', 'assets/products/romsan-container-generator.jpg'],
-        ['Air Cargo Transport Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
+        ['Air Cargo Transport Trailer', 'power', 'Transport Trailers', 'Romsan',
             'NATO-type cargo trailer engineered for air-freight and airside logistics, with an optional 360° rotating deck.',
             $S([['Type', 'NATO type'], ['Deck', 'Optional 360° rotation'], ['Brakes', 'Pneumatic']]),
             'Logistics', 'trailer', 'assets/products/romsan-air-cargo-trailer.jpg'],
-        ['Flatbed & Container Shipment Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
+        ['Flatbed & Container Shipment Trailer', 'power', 'Transport Trailers', 'Romsan',
             'Single and tandem-axle flatbeds for machinery, 20 ft containers and general site cargo.',
             $S([['Axles', 'Single / tandem'], ['Load', '20 ft container'], ['Landing legs', 'Heavy duty']]),
             'Haulage', 'trailer', 'assets/products/romsan-flatbed-trailer.jpg'],
-        ['Field Living & Utility Containers', 'agriculture', 'Site Containers', 'Romsan',
+        ['Field Living & Utility Containers', 'power', 'Site Containers', 'Romsan',
             '20 ft accommodation, kitchen, cold-storage, WC & bathroom and living units for remote camps and projects.',
             $S([['Size', '20 ft'], ['Units', 'Living · Kitchen · Cold store · WC']]),
             'Camp Setup', 'container', 'assets/products/romsan-living-container.jpg'],
-        ['Heavy-Duty LED Trailer Lamps', 'agriculture', 'Components', 'Romsan',
+        ['Heavy-Duty LED Trailer Lamps', 'power', 'Components', 'Romsan',
             'Sealed 12–24 V LED stop, signal and fog lamps in guarded aluminium housings, built to MIL-STD 810F / 461E.',
             $S([['Voltage', '12 – 24 VDC'], ['Sealing', 'IP X8'], ['Standard', 'MIL-STD 810F / 461E']]),
             'Components', 'lamp', 'assets/products/romsan-led-lamp.jpg'],

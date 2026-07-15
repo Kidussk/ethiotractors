@@ -8,7 +8,7 @@ header('Content-Type: text/plain; charset=utf-8');
 
 require __DIR__ . '/db.php';
 
-echo "Running catalogue v6 migration...\n\n";
+echo "Running catalogue v7 migration...\n\n";
 
 $pdo = db();
 $before = (int)$pdo->query("SELECT COALESCE(`value`, '0') FROM settings WHERE `key` = 'catalog_version'")->fetchColumn();
@@ -46,11 +46,18 @@ foreach ($names as $name) {
     }
 }
 
-// These two must be gone after v6.
-$gone = $pdo->prepare('SELECT COUNT(*) FROM products WHERE name = ?');
+// v7 reinstates these two lines.
+$back = $pdo->prepare('SELECT COUNT(*) FROM products WHERE name = ?');
 foreach (['Zoomlion Tractor Series', 'Boat Transport Trailer'] as $name) {
-    $gone->execute([$name]);
-    echo ((int)$gone->fetchColumn() === 0 ? "REMOVED | " : "STILL PRESENT (!) | ") . $name . "\n";
+    $back->execute([$name]);
+    echo ((int)$back->fetchColumn() > 0 ? "RESTORED | " : "MISSING (!) | ") . $name . "\n";
+}
+
+// Every sector should now hold at least 10 product lines.
+echo "\nSector counts:\n";
+foreach ($pdo->query("SELECT sector, COUNT(*) c FROM products GROUP BY sector") as $row) {
+    $flag = (int)$row['c'] >= 10 ? 'OK ' : 'LOW';
+    echo "{$flag} | {$row['sector']}: {$row['c']}\n";
 }
 
 echo "\nDone. DELETE import_img_products.php from the server.\n";
