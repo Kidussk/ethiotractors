@@ -82,12 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin.php' . ($action === 'login' ? '?view=login' : ''));
     }
 
-    /* ----- Login (rate-limited) ----- */
+    /* ----- Login (rate-limited per IP, database-backed) ----- */
     if ($action === 'login') {
-        $now      = time();
-        $attempts = $_SESSION['login_attempts'] ?? ['count' => 0, 'until' => 0];
-        if ($attempts['count'] >= 6 && $now < $attempts['until']) {
-            flash_set('error', 'Too many failed attempts. Try again in ' . (int)ceil(($attempts['until'] - $now) / 60) . ' minute(s).');
+        if (et_throttled('login', 6, 600)) {
+            flash_set('error', 'Too many failed attempts — please wait a few minutes and try again.');
             redirect('admin.php?view=login');
         }
 
@@ -100,12 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user && password_verify($password, $user['pass_hash'])) {
             session_regenerate_id(true);
             $_SESSION['admin'] = ['id' => $user['id'], 'username' => $user['username']];
-            unset($_SESSION['login_attempts']);
+            $_SESSION['admin_last_seen'] = time();
             redirect('admin.php');
         }
-        $attempts['count']++;
-        $attempts['until'] = $now + 600;
-        $_SESSION['login_attempts'] = $attempts;
+        et_throttle_hit('login', 600);
         flash_set('error', 'Invalid username or password.');
         redirect('admin.php?view=login');
     }
@@ -207,20 +203,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'inquiry_status': {
             $id     = (int)($_POST['id'] ?? 0);
             $status = in_array($_POST['status'] ?? '', ['new', 'contacted', 'closed'], true) ? $_POST['status'] : 'new';
+            $back   = in_array($_POST['back'] ?? '', ['', '&status=new', '&status=contacted', '&status=closed'], true) ? $_POST['back'] : '';
             db()->prepare('UPDATE inquiries SET status = ? WHERE id = ?')->execute([$status, $id]);
             flash_set('success', "Inquiry marked as {$status}.");
-            redirect('admin.php?view=inquiries' . ($_POST['back'] ?? ''));
+            redirect('admin.php?view=inquiries' . $back);
         }
 
         case 'inquiry_delete': {
+            $back = in_array($_POST['back'] ?? '', ['', '&status=new', '&status=contacted', '&status=closed'], true) ? $_POST['back'] : '';
             db()->prepare('DELETE FROM inquiries WHERE id = ?')->execute([(int)($_POST['id'] ?? 0)]);
             flash_set('success', 'Inquiry deleted.');
-            redirect('admin.php?view=inquiries' . ($_POST['back'] ?? ''));
+            redirect('admin.php?view=inquiries' . $back);
         }
 
         /* ----- Settings ----- */
         case 'settings_save': {
-            $fields = ['company_name','tagline','phone','phone2','email','address','branches','hours','map_query','telegram','facebook','linkedin','trade_license'];
+            $fields = ['company_name','tagline','phone','phone2','phone3','email','address','branches','hours','map_query','telegram','facebook','linkedin','trade_license'];
             foreach ($fields as $f) {
                 et_save_setting($f, mb_substr(trim((string)($_POST[$f] ?? '')), 0, 400));
             }
@@ -282,7 +280,11 @@ if ($view === 'export') {
     fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel reads it correctly
     fputcsv($out, ['ID', 'Date (UTC)', 'Status', 'Source', 'Name', 'Company', 'Email', 'Phone', 'Industry', 'Interest', 'Message']);
     foreach ($rows as $r) {
-        fputcsv($out, array_values($r));
+        // Neutralize spreadsheet formula injection (values starting with = + - @ etc.).
+        fputcsv($out, array_map(
+            static fn($v) => preg_match('/^[=+\-@\t\r]/', (string)$v) ? "'" . $v : $v,
+            array_values($r)
+        ));
     }
     fclose($out);
     exit;
@@ -307,7 +309,14 @@ if ($loggedIn) {
 /* ============================================================
    LOGIN VIEW
    ============================================================ */
-if ($view === 'login'): ?>
+if ($view === 'login'):
+    // Show the default credentials only while they still work — once the
+    // password is changed, nothing about the account is revealed here.
+    $defaultHash = db()->prepare('SELECT pass_hash FROM users WHERE username = ?');
+    $defaultHash->execute(['admin']);
+    $hash = $defaultHash->fetchColumn();
+    $showDefaultHint = $hash !== false && password_verify('ethio2026', (string)$hash);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -315,9 +324,9 @@ if ($view === 'login'): ?>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Staff Login — EthioTractors Admin</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314170F'/%3E%3Cpath d='M4 24L12 9L16 16L21 7L28 24' stroke='%23C1782E' stroke-width='2.6' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/tokens.css">
 <link rel="stylesheet" href="assets/admin.css">
 </head>
@@ -325,8 +334,7 @@ if ($view === 'login'): ?>
   <div>
     <div class="login-card">
       <div class="login-logo">
-        <svg viewBox="0 0 32 32" fill="none"><path d="M2 24L11 8L16 16L21 6L30 24" stroke="#C1782E" stroke-width="2.4" stroke-linejoin="round"/></svg>
-        Ethio<span class="dot">Tractors</span>
+        <img src="assets/logo.png" alt="Ethio Tractor" class="login-logo-img" width="200" height="58">
       </div>
       <div class="login-sub">Staff Portal — Authorized Access Only</div>
       <?php if ($flash): ?><div class="<?= $flash['type'] === 'error' ? 'login-error' : 'login-ok' ?>"><?= e($flash['message']) ?></div><?php endif; ?>
@@ -343,7 +351,11 @@ if ($view === 'login'): ?>
         </div>
         <button type="submit" class="btn btn-solid" style="justify-content:center">Sign In →</button>
       </form>
+      <?php if ($showDefaultHint): ?>
       <p class="login-hint">First time here? The default account is <code>admin</code> / <code>ethio2026</code> — change it under <strong>Settings → Account</strong> right after signing in.</p>
+      <?php else: ?>
+      <p class="login-hint">Access is restricted to authorized EthioTractors staff.</p>
+      <?php endif; ?>
     </div>
     <a class="login-back" href="index.php">← Back to the public website</a>
   </div>
@@ -511,9 +523,9 @@ $pageTitle = $titles[$view] ?? 'Overview';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($pageTitle) ?> — EthioTractors Admin</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314170F'/%3E%3Cpath d='M4 24L12 9L16 16L21 7L28 24' stroke='%23C1782E' stroke-width='2.6' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/tokens.css">
 <link rel="stylesheet" href="assets/admin.css">
 </head>
@@ -523,8 +535,8 @@ $pageTitle = $titles[$view] ?? 'Overview';
   <!-- ======= Sidebar ======= -->
   <aside class="sidebar" id="sidebar">
     <a class="sb-logo" href="admin.php">
-      <svg viewBox="0 0 32 32" fill="none"><path d="M2 24L11 8L16 16L21 6L30 24" stroke="#C1782E" stroke-width="2.4" stroke-linejoin="round"/></svg>
-      <span>Ethio<span class="dot">Tractors</span><small>Admin Panel</small></span>
+      <img src="assets/logo.png" alt="Ethio Tractor" class="sb-logo-img" width="160" height="46">
+      <span><small>Admin Panel</small></span>
     </a>
     <nav class="sb-nav">
       <a href="admin.php" class="<?= $view === 'dashboard' ? 'active' : '' ?>">
@@ -1079,9 +1091,10 @@ $pageTitle = $titles[$view] ?? 'Overview';
           <div class="field"><label>Company Name</label><input name="company_name" maxlength="120" value="<?= e($settings['company_name']) ?>"></div>
           <div class="field"><label>Trade License No.</label><input name="trade_license" maxlength="80" value="<?= e($settings['trade_license']) ?>" placeholder="Optional"></div>
         </div>
-        <div class="row-2">
-          <div class="field"><label>Phone</label><input name="phone" maxlength="60" value="<?= e($settings['phone']) ?>" placeholder="+251 ..."></div>
-          <div class="field"><label>Phone 2</label><input name="phone2" maxlength="60" value="<?= e($settings['phone2']) ?>" placeholder="Optional"></div>
+        <div class="row-3">
+          <div class="field"><label>Phone</label><input name="phone" maxlength="60" value="<?= e($settings['phone'] ?? '') ?>" placeholder="0960 ..."></div>
+          <div class="field"><label>Phone 2</label><input name="phone2" maxlength="60" value="<?= e($settings['phone2'] ?? '') ?>" placeholder="Optional"></div>
+          <div class="field"><label>Phone 3</label><input name="phone3" maxlength="60" value="<?= e($settings['phone3'] ?? '') ?>" placeholder="Optional"></div>
         </div>
         <div class="field"><label>Email</label><input name="email" type="email" maxlength="160" value="<?= e($settings['email']) ?>"></div>
         <div class="field"><label>Head Office Address</label><input name="address" maxlength="240" value="<?= e($settings['address']) ?>"></div>

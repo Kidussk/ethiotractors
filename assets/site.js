@@ -30,6 +30,33 @@
     if (toTop) toTop.classList.toggle('show', y > 700);
   }, { passive: true });
 
+  /* ---------- Scrollspy: highlight the nav link of the section in view ---------- */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('nav.main a[href^="#"]'));
+  var spyTargets = navLinks
+    .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(function (el) { return el && el.tagName !== 'BODY'; });
+
+  function setActiveLink(hash) {
+    navLinks.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === hash);
+    });
+  }
+
+  function spy() {
+    // A section is "current" when its area crosses the line just under the header.
+    var line = 120;
+    var current = '';
+    for (var i = 0; i < spyTargets.length; i++) {
+      var r = spyTargets[i].getBoundingClientRect();
+      if (r.top <= line && r.bottom > line) { current = '#' + spyTargets[i].id; break; }
+    }
+    if (!current && window.scrollY < 200) current = '#top';
+    setActiveLink(current);
+  }
+  window.addEventListener('scroll', spy, { passive: true });
+  window.addEventListener('resize', spy, { passive: true });
+  spy();
+
   /* ---------- Reveal on scroll ---------- */
   var revealEls = document.querySelectorAll('.reveal');
   if ('IntersectionObserver' in window) {
@@ -122,8 +149,13 @@
       var message = document.getElementById('f-message');
       if (interest) interest.value = btn.getAttribute('data-quote');
       if (industry) {
-        var sector = btn.getAttribute('data-sector') || '';
-        var label = sector.charAt(0).toUpperCase() + sector.slice(1);
+        var sectorLabels = {
+          agriculture: 'Agriculture',
+          construction: 'Construction',
+          mining: 'Mining',
+          power: 'Power & Logistics'
+        };
+        var label = sectorLabels[btn.getAttribute('data-sector')] || '';
         for (var i = 0; i < industry.options.length; i++) {
           if (industry.options[i].text === label) { industry.selectedIndex = i; break; }
         }

@@ -23,6 +23,34 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require __DIR__ . '/config.php';
 
+/* ---------- Errors: log everything, never show details to visitors ---------- */
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+set_exception_handler(static function (Throwable $e): void {
+    error_log('[EthioTractors] Uncaught ' . get_class($e) . ': ' . $e->getMessage()
+        . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+    }
+    exit('Something went wrong on our side. Please try again shortly.');
+});
+
+/* ---------- Security headers (sent on every page, before any output) ---------- */
+if (PHP_SAPI !== 'cli' && !headers_sent()) {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
+        . "img-src 'self' data: https://images.unsplash.com; frame-src https://www.google.com; "
+        . "connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'");
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
+}
+
 /** HTML-escape shortcut. */
 function e(?string $s): string
 {
@@ -37,12 +65,19 @@ function db(): PDO
         return $pdo;
     }
 
-    $dsn = 'mysql:host=' . ET_DB_HOST . ';dbname=' . ET_DB_NAME . ';charset=utf8mb4';
-    $pdo = new PDO($dsn, ET_DB_USER, ET_DB_PASS, [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-    ]);
+    $port = defined('ET_DB_PORT') ? ET_DB_PORT : '3306';
+    $dsn  = 'mysql:host=' . ET_DB_HOST . ';port=' . $port . ';dbname=' . ET_DB_NAME . ';charset=utf8mb4';
+    try {
+        $pdo = new PDO($dsn, ET_DB_USER, ET_DB_PASS, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
+    } catch (PDOException) {
+        // Never leak credentials or stack traces to visitors.
+        http_response_code(503);
+        exit('The site is temporarily unavailable — database connection failed. Please check the settings in config.php.');
+    }
     // Store timestamps in UTC (the admin panel converts to Africa/Addis_Ababa).
     $pdo->exec("SET time_zone = '+00:00'");
 
@@ -51,8 +86,173 @@ function db(): PDO
     $fresh = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0;
     if ($fresh) {
         et_seed($pdo);
+    } else {
+        et_upgrade_catalog($pdo);
+        et_upgrade_settings($pdo);
     }
     return $pdo;
+}
+
+/**
+ * One-time catalog upgrades for databases seeded before new brands were added.
+ * Uses the settings table as a version stamp so products deleted by the admin
+ * are never resurrected. Must use $pdo directly — db() is not ready yet.
+ */
+function et_upgrade_catalog(PDO $pdo): void
+{
+    $stmt = $pdo->prepare("SELECT `value` FROM settings WHERE `key` = 'catalog_version'");
+    $stmt->execute();
+    $version = (int)($stmt->fetchColumn() ?: 1);
+
+    if ($version < 2) {
+        // v2: Romsan Machinery Industry — mobile power & field-logistics lines.
+        $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn();
+        et_seed_romsan($pdo, $sort);
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '2')
+                       ON DUPLICATE KEY UPDATE `value` = '2'")->execute();
+    }
+
+    if ($version < 3) {
+        // v3: attach catalog / brand product photos to the original seed products.
+        // Only fills rows that still have no image, so admin-uploaded photos are kept.
+        $upd = $pdo->prepare('UPDATE products SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = "")');
+        foreach (et_default_product_images() as $name => $url) {
+            $upd->execute([$url, $name]);
+        }
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '3')
+                       ON DUPLICATE KEY UPDATE `value` = '3'")->execute();
+    }
+
+    if ($version < 4) {
+        // v4: refreshed Doğanlar catalogue photos + Romsan agricultural trailers & spreader.
+        $imgUpd = $pdo->prepare('UPDATE products SET image_url = ? WHERE name = ?');
+        foreach (et_catalog_v4_image_updates() as $name => $url) {
+            $imgUpd->execute([$url, $name]);
+        }
+        $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn();
+        et_seed_romsan_agri($pdo, $sort);
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '4')
+                       ON DUPLICATE KEY UPDATE `value` = '4'")->execute();
+    }
+
+    if ($version < 5) {
+        // v5: Romsan is an agricultural machinery brand — move all lines to Agriculture.
+        $pdo->exec("UPDATE products SET sector = 'agriculture' WHERE brand = 'Romsan' AND sector = 'power'");
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '5')
+                       ON DUPLICATE KEY UPDATE `value` = '5'")->execute();
+    }
+}
+
+/** Doğanlar photos refreshed from the Romsan product catalogue (v4). */
+function et_catalog_v4_image_updates(): array
+{
+    return [
+        'Pin Cutting Chisel — Field / Garden'     => 'assets/products/doganlar-pin-cutting-chisel.jpg',
+        'Spring Cultivator'                       => 'assets/products/doganlar-spring-cultivator.jpg',
+        'Tiller / Scissor Spring Tiller'          => 'assets/products/doganlar-tiller.jpg',
+        'Rotovator — Field / Garden / Vertical'   => 'assets/products/doganlar-rotovator.jpg',
+    ];
+}
+
+/** Romsan farm trailers & manure spreader from the agricultural catalogue (v4). */
+function et_seed_romsan_agri(PDO $pdo, int $sortStart): void
+{
+    $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
+    $seed = [
+        ['Monocoque Tandem Tipper — R100TAHKP4', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Monocoque tandem-axle tipper for grain, bulk and site cargo — rear hydraulic tipping with parabolic suspension.',
+            $S([['Payload', '10,000 kg'], ['Volume', '11.7 – 16.4 m³'], ['Tipping', 'Rear']]),
+            'Haulage', 'trailer', 'assets/products/romsan-r100tahkp4-tipper.jpg'],
+        ['Manure Spreader — R100TKG', 'agriculture', 'Spreaders', 'Romsan',
+            'Hydraulic conveyor and PTO-driven twin-column spreader for even field distribution up to 15 m.',
+            $S([['Volume', '13 m³'], ['Spread width', 'Up to 15 m'], ['PTO', '540 rpm']]),
+            'Livestock', 'machine', 'assets/products/romsan-r100tkg-manure-spreader.jpg'],
+        ['Monocoque Tandem Tipper — R220TAHK ROBUST', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Heavy-duty monocoque tipper with HARDOX floor — built for abrasive loads and demanding field haulage.',
+            $S([['Payload', '18,800 kg'], ['Volume', '13 m³'], ['Floor', '6 mm HARDOX']]),
+            'Haulage', 'trailer', 'assets/products/romsan-r220tahk-robust-tipper.jpg'],
+        ['Three-Axle Tipper — R180USGA', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Three-axle grain and bulk trailer with three-way hydraulic tipping and optional tarpaulin frame.',
+            $S([['Payload', '24,000 kg'], ['Volume', '28 – 30 m³'], ['Tipping', '3-way']]),
+            'Haulage', 'trailer', 'assets/products/romsan-r180usga-tipper.jpg'],
+        ['Three-Axle Tipper — R140CSGA4P-L', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Three-axle tipper for high-volume grain and bulk transport with three-way hydraulic discharge.',
+            $S([['Payload', '13,150 – 16,150 kg'], ['Volume', '20 – 22 m³'], ['Tipping', '3-way']]),
+            'Haulage', 'trailer', 'assets/products/romsan-r140csga4p-l-tipper.jpg'],
+        ['Tandem Axle 3-Way Tipper — R16TASGAP4', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Tandem-axle trailer with three-way tipping, steering axle and pneumatic braking for versatile field logistics.',
+            $S([['Payload', '16,000 kg'], ['Volume', '20 – 22 m³'], ['Tipping', '3-way']]),
+            'Haulage', 'trailer', 'assets/products/romsan-r16tasgap4-tipper.jpg'],
+    ];
+
+    $exists = $pdo->prepare('SELECT id FROM products WHERE name = ? LIMIT 1');
+    $stmt = $pdo->prepare(
+        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $sort = $sortStart;
+    foreach ($seed as $p) {
+        $exists->execute([$p[0]]);
+        if ($exists->fetchColumn()) {
+            continue;
+        }
+        $stmt->execute([...$p, $sort++]);
+    }
+}
+
+/** One-time contact-info upgrades for existing databases. */
+function et_upgrade_settings(PDO $pdo): void
+{
+    $stmt = $pdo->prepare("SELECT `value` FROM settings WHERE `key` = 'contact_version'");
+    $stmt->execute();
+    $version = (int)($stmt->fetchColumn() ?: 0);
+
+    if ($version < 1) {
+        $phones = [
+            'phone'  => '0960995555',
+            'phone2' => '0961995555',
+            'phone3' => '0986807851',
+        ];
+        $upd = $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?)
+                              ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)');
+        foreach ($phones as $k => $v) {
+            $upd->execute([$k, $v]);
+        }
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('contact_version', '1')
+                       ON DUPLICATE KEY UPDATE `value` = '1'")->execute();
+    }
+}
+
+/** Name → default photo map, shared by the fresh seed and the v3 backfill migration. */
+function et_default_product_images(): array
+{
+    return [
+        // Doğanlar — cropped from the manufacturer's product catalogue
+        'Gas-Safe Reversible Plough'         => 'assets/products/doganlar-reversible-plough.jpg',
+        'Gas-Safe Plough'                    => 'assets/products/doganlar-gas-safe-plough.jpg',
+        'Spring Profile Plough'              => 'assets/products/doganlar-spring-profile-plough.jpg',
+        'Rotary Spring Profile Plough'       => 'assets/products/doganlar-rotary-spring-plough.jpg',
+        'Pin Cutting Plough'                 => 'assets/products/doganlar-pin-cutting-plough.jpg',
+        'Rotary Mounted Pin Cutting Plough'  => 'assets/products/doganlar-rotary-pin-plough.jpg',
+        'Standard Plough'                    => 'assets/products/doganlar-standard-plough.jpg',
+        'Spring Chisel'                      => 'assets/products/doganlar-spring-chisel.jpg',
+        'Pin Cutting Chisel — Field / Garden'=> 'assets/products/doganlar-pin-cutting-chisel.jpg',
+        'Disc Harrow'                        => 'assets/products/doganlar-disc-harrow.jpg',
+        'Spring Cultivator'                  => 'assets/products/doganlar-spring-cultivator.jpg',
+        'Tiller / Scissor Spring Tiller'     => 'assets/products/doganlar-tiller.jpg',
+        'Rotovator — Field / Garden / Vertical' => 'assets/products/doganlar-rotovator.jpg',
+        // Zoomlion — freely-licensed photos (see assets/products/IMAGE-CREDITS.md)
+        'Zoomlion Tractor Series'            => 'assets/products/zoomlion-tractor.jpg',
+        'Combine Harvester'                  => 'assets/products/zoomlion-combine.jpg',
+        'Sugarcane Harvester'                => 'assets/products/zoomlion-sugarcane.jpg',
+        'Excavators — Mini to Large'         => 'assets/products/zoomlion-excavator.jpg',
+        'Wheel & Crawler Loaders'            => 'assets/products/zoomlion-loader.jpg',
+        'Crawler Bulldozer'                  => 'assets/products/zoomlion-bulldozer.jpg',
+        'Truck & Crawler Cranes'             => 'assets/products/zoomlion-truck-crane.jpg',
+        'Tower Cranes — Flat-Top & Luffing Jib' => 'assets/products/zoomlion-tower-crane.jpg',
+        'Truck Mixer & Concrete Pumps'       => 'assets/products/zoomlion-concrete-pump.jpg',
+        'Large Mining Excavator'             => 'assets/products/zoomlion-mining-excavator.jpg',
+    ];
 }
 
 function et_migrate(PDO $pdo): void
@@ -111,6 +311,48 @@ function et_migrate(PDO $pdo): void
             INDEX idx_events_type_date (type, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS throttle (
+            tkey         VARCHAR(64) PRIMARY KEY,
+            hits         INT NOT NULL DEFAULT 0,
+            window_start INT NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+}
+
+/* ---------- Abuse throttling (per-IP, database-backed) ---------- */
+
+/** Privacy-friendly per-IP key: the raw address is hashed, never stored. */
+function et_throttle_key(string $purpose): string
+{
+    return $purpose . ':' . substr(hash('sha256', $_SERVER['REMOTE_ADDR'] ?? 'unknown'), 0, 40);
+}
+
+/** True when this client already used up its allowance for the purpose. */
+function et_throttled(string $purpose, int $max, int $windowSeconds): bool
+{
+    $stmt = db()->prepare('SELECT hits, window_start FROM throttle WHERE tkey = ?');
+    $stmt->execute([et_throttle_key($purpose)]);
+    $row = $stmt->fetch();
+    if (!$row || (int)$row['window_start'] < time() - $windowSeconds) {
+        return false;
+    }
+    return (int)$row['hits'] >= $max;
+}
+
+/** Count one hit against the client's allowance (resets when the window expired). */
+function et_throttle_hit(string $purpose, int $windowSeconds): void
+{
+    $now = time();
+    $cut = $now - $windowSeconds;
+    db()->prepare('INSERT INTO throttle (tkey, hits, window_start) VALUES (?, 1, ?)
+                   ON DUPLICATE KEY UPDATE
+                     hits = IF(window_start < ?, 1, hits + 1),
+                     window_start = IF(window_start < ?, ?, window_start)')
+        ->execute([et_throttle_key($purpose), $now, $cut, $cut, $now]);
+    if (random_int(1, 100) === 1) { // occasional cleanup of stale rows
+        db()->prepare('DELETE FROM throttle WHERE window_start < ?')->execute([$now - 86400]);
+    }
 }
 
 function et_seed(PDO $pdo): void
@@ -122,8 +364,9 @@ function et_seed(PDO $pdo): void
     $defaults = [
         'company_name'  => 'EthioTractors PLC',
         'tagline'       => 'Imported Machinery — Built for Ethiopia’s Work',
-        'phone'         => '0921692915',
-        'phone2'        => '',
+        'phone'         => '0960995555',
+        'phone2'        => '0961995555',
+        'phone3'        => '0986807851',
         'email'         => 'info@ethiotractors.com',
         'address'       => 'Bole Road, Addis Ababa, Ethiopia',
         'branches'      => '',
@@ -133,6 +376,7 @@ function et_seed(PDO $pdo): void
         'facebook'      => '',
         'linkedin'      => '',
         'trade_license' => '',
+        'catalog_version' => '5',
     ];
     $stmt = $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?)');
     foreach ($defaults as $k => $v) {
@@ -150,128 +394,182 @@ function et_seed_products(PDO $pdo): void
         // ---- Agriculture — power & harvest (Zoomlion) ----
         ['Zoomlion Tractor Series', 'agriculture', 'Tractors', 'Zoomlion',
             'Row-crop and utility tractors sized for smallholder plots up to commercial farm operations.',
-            $S([]), 'Power Unit', 'tractor'],
+            $S([]), 'Power Unit', 'tractor', 'assets/products/zoomlion-tractor.jpg'],
         ['Combine Harvester', 'agriculture', 'Harvesters', 'Zoomlion',
             'Grain harvesting with integrated threshing and cleaning for cereal crops.',
-            $S([]), 'Harvest', 'harvester'],
+            $S([]), 'Harvest', 'harvester', 'assets/products/zoomlion-combine.jpg'],
         ['Sugarcane Harvester', 'agriculture', 'Harvesters', 'Zoomlion',
             'Purpose-built cane cutting and billeting for large-scale plantation operations.',
-            $S([]), 'Harvest', 'cane'],
+            $S([]), 'Harvest', 'cane', 'assets/products/zoomlion-sugarcane.jpg'],
         ['Baler', 'agriculture', 'Post-Harvest', 'Zoomlion',
             'Compresses hay or straw into transportable, storable bales after harvest.',
-            $S([]), 'Post-Harvest', 'baler'],
+            $S([]), 'Post-Harvest', 'baler', ''],
         ['Grain Dryer', 'agriculture', 'Post-Harvest', 'Zoomlion',
             'Reduces post-harvest moisture loss and supports safe long-term grain storage.',
-            $S([]), 'Post-Harvest', 'dryer'],
+            $S([]), 'Post-Harvest', 'dryer', ''],
 
         // ---- Agriculture — ploughs (Doğanlar) ----
         ['Gas-Safe Reversible Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Hydraulic-piston escape mechanism lets each body clear rocky ground without damage — adjustable 12"–18" working width.',
             $S([['Bodies', '4 / 5 / 6'], ['Weight', '940 – 1,120 kg'], ['Power req.', '110 – 250 hp']]),
-            '140×120 Profile', 'plough'],
+            '140×120 Profile', 'plough', 'assets/products/doganlar-reversible-plough.jpg'],
         ['Gas-Safe Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Fixed gas-safe plough with hydraulic body protection for rocky and demanding soils.',
             $S([['Bodies', '4 – 6'], ['Weight', '1,420 – 1,840 kg'], ['Power req.', '110 – 250 hp']]),
-            '16" Blade', 'plough'],
+            '16" Blade', 'plough', 'assets/products/doganlar-gas-safe-plough.jpg'],
         ['Spring Profile Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Independent spring-body protection with hydraulic working-width adjustment — 3 to 5 body configurations.',
             $S([['Bodies', '3 / 4 / 5'], ['Weight', '600 – 995 kg'], ['Power req.', '45 – 130 hp']]),
-            '100–140 Profile', 'plough'],
+            '100–140 Profile', 'plough', 'assets/products/doganlar-spring-profile-plough.jpg'],
         ['Rotary Spring Profile Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Rotary-reset spring bodies for continuous ploughing in stony fields without stopping to reset.',
             $S([['Bodies', '4 – 5'], ['Weight', '1,315 – 1,550 kg'], ['Power req.', '85 – 165 hp']]),
-            '12–14" Blade', 'plough'],
+            '12–14" Blade', 'plough', 'assets/products/doganlar-rotary-spring-plough.jpg'],
         ['Pin Cutting Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Shear-pin protected bodies in 4 to 7 body configurations for general field ploughing.',
             $S([['Bodies', '4 – 7'], ['Weight', '685 – 1,782 kg'], ['Power req.', '80 – 245 hp']]),
-            '12–16" Blade', 'plough'],
+            '12–16" Blade', 'plough', 'assets/products/doganlar-pin-cutting-plough.jpg'],
         ['Rotary Mounted Pin Cutting Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Rotary-mounted shear-pin plough for smaller tractors and tighter field patterns.',
             $S([['Bodies', '2 – 5'], ['Weight', '750 – 1,355 kg'], ['Power req.', '65 – 175 hp']]),
-            '12–16" Blade', 'plough'],
+            '12–16" Blade', 'plough', 'assets/products/doganlar-rotary-pin-plough.jpg'],
         ['Standard Plough', 'agriculture', 'Ploughs', 'Doğanlar',
             'Economical fixed mouldboard plough for routine primary tillage.',
             $S([['Bodies', '2 – 6'], ['Weight', '160 – 795 kg'], ['Power req.', '30 – 130 hp']]),
-            '8–16" Blade', 'plough'],
+            '8–16" Blade', 'plough', 'assets/products/doganlar-standard-plough.jpg'],
 
         // ---- Agriculture — chisels & harrows (Doğanlar) ----
         ['Spring Chisel', 'agriculture', 'Chisels & Harrows', 'Doğanlar',
             'Breaks up hardpan without inverting the soil layer. Independent spring tines deflect off rock and reset automatically.',
             $S([['Feet', '5 – 11'], ['Depth', '375 – 450 mm'], ['Power req.', '50 – 140 hp']]),
-            'Deep Tillage', 'chisel'],
+            'Deep Tillage', 'chisel', 'assets/products/doganlar-spring-chisel.jpg'],
         ['Pin Cutting Chisel — Field / Garden', 'agriculture', 'Chisels & Harrows', 'Doğanlar',
             'Heat-treated pin-and-clamp assemblies for stubble and deep tillage in open-field and orchard/vineyard rows.',
             $S([['Feet', '7 – 11'], ['Depth', '250 – 450 mm'], ['Power req.', '45 – 130 hp']]),
-            'Deep Tillage', 'chisel'],
+            'Deep Tillage', 'chisel', 'assets/products/doganlar-pin-cutting-chisel.jpg'],
         ['Disc Harrow', 'agriculture', 'Chisels & Harrows', 'Doğanlar',
             'Suspension-mounted discs for seedbed prep, residue cutting and post-harvest tillage.',
             $S([['Discs', '16 – 32'], ['Depth', '225 – 250 mm'], ['Power req.', '45 – 180 hp']]),
-            'Seedbed', 'harrow'],
+            'Seedbed', 'harrow', 'assets/products/doganlar-disc-harrow.jpg'],
 
         // ---- Agriculture — cultivators & finishing (Doğanlar) ----
         ['Spring Cultivator', 'agriculture', 'Cultivators & Tillers', 'Doğanlar',
             'Loosens and aerates soil, cuts weed roots, and inter-cultivates row crops like maize, potato and sunflower.',
             $S([['Feet', '7 – 22'], ['Depth', '175 – 250 mm'], ['Power req.', '40 – 200 hp']]),
-            'Row Crop', 'cultivator'],
+            'Row Crop', 'cultivator', 'assets/products/doganlar-spring-cultivator.jpg'],
         ['Tiller / Scissor Spring Tiller', 'agriculture', 'Cultivators & Tillers', 'Doğanlar',
             'Final seedbed preparation before planting — self-vibrating spring mechanism levels the field in one pass.',
             $S([['Width', '21 – 40 ft'], ['Power req.', '50 – 140 hp']]),
-            'Seedbed', 'tiller'],
+            'Seedbed', 'tiller', 'assets/products/doganlar-tiller.jpg'],
         ['Rotovator — Field / Garden / Vertical', 'agriculture', 'Cultivators & Tillers', 'Doğanlar',
             'Mixes and breaks down soil, weeds and residue into organic matter. Field, garden and vertical-tine configurations.',
             $S([['Width', '160 – 400 cm'], ['Power req.', '45 – 180 hp']]),
-            'Residue', 'rotovator'],
+            'Residue', 'rotovator', 'assets/products/doganlar-rotovator.jpg'],
 
         // ---- Construction (Zoomlion) ----
         ['Excavators — Mini to Large', 'construction', 'Earthmoving', 'Zoomlion',
             'Mini, small, medium, large and wheeled excavators for sites of every scale.',
-            $S([]), 'Earthmoving', 'excavator'],
+            $S([]), 'Earthmoving', 'excavator', 'assets/products/zoomlion-excavator.jpg'],
         ['Wheel & Crawler Loaders', 'construction', 'Earthmoving', 'Zoomlion',
             'Skid steer, crawler, wheel and compact track loaders for material handling and site prep.',
-            $S([]), 'Earthmoving', 'loader'],
+            $S([]), 'Earthmoving', 'loader', 'assets/products/zoomlion-loader.jpg'],
         ['Crawler Bulldozer', 'construction', 'Earthmoving', 'Zoomlion',
             'Heavy blade grading and earthmoving for road building and site clearance.',
-            $S([]), 'Earthmoving', 'dozer'],
+            $S([]), 'Earthmoving', 'dozer', 'assets/products/zoomlion-bulldozer.jpg'],
         ['Truck & Crawler Cranes', 'construction', 'Cranes & Hoisting', 'Zoomlion',
             'Truck, rough terrain, all terrain and crawler cranes for lifting and placement.',
-            $S([]), 'Mobile Crane', 'crane'],
+            $S([]), 'Mobile Crane', 'crane', 'assets/products/zoomlion-truck-crane.jpg'],
         ['Tower Cranes — Flat-Top & Luffing Jib', 'construction', 'Cranes & Hoisting', 'Zoomlion',
             'Fixed-site vertical lift for multi-storey construction projects.',
-            $S([]), 'Hoisting', 'tower'],
+            $S([]), 'Hoisting', 'tower', 'assets/products/zoomlion-tower-crane.jpg'],
         ['Construction Hoist', 'construction', 'Cranes & Hoisting', 'Zoomlion',
             'Personnel and material lifts for high-rise site logistics.',
-            $S([]), 'Hoisting', 'hoist'],
+            $S([]), 'Hoisting', 'hoist', ''],
         ['Rotary Drilling Rig', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'Bored pile foundation drilling for high-load structures.',
-            $S([]), 'Foundation', 'drillrig'],
+            $S([]), 'Foundation', 'drillrig', ''],
         ['Truck Mixer & Concrete Pumps', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'Truck mixers, truck-mounted pumps, trailer pumps and placing booms.',
-            $S([]), 'Concrete', 'mixer'],
+            $S([]), 'Concrete', 'mixer', 'assets/products/zoomlion-concrete-pump.jpg'],
         ['Concrete Batching Plant', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'On-site or centralized concrete batching for continuous supply.',
-            $S([]), 'Concrete', 'plant'],
+            $S([]), 'Concrete', 'plant', ''],
 
         // ---- Mining (Zoomlion) ----
         ['Mining Dump Truck', 'mining', 'Haulage', 'Zoomlion',
             'High-payload haulage built for continuous pit-to-stockpile cycles.',
-            $S([]), 'Mining', 'dumptruck'],
+            $S([]), 'Mining', 'dumptruck', ''],
         ['Large Mining Excavator', 'mining', 'Excavation', 'Zoomlion',
             'Mine-class excavators for overburden removal and bulk material loading.',
-            $S([]), 'Mining', 'excavator'],
+            $S([]), 'Mining', 'excavator', 'assets/products/zoomlion-mining-excavator.jpg'],
         ['Mobile Crushers & Screens', 'mining', 'Processing', 'Zoomlion',
             'On-site crushing and screening, plus fixed crushers for aggregate production.',
-            $S([]), 'Mining', 'crusher'],
+            $S([]), 'Mining', 'crusher', ''],
         ['Surface DTH Drill Rig', 'mining', 'Drilling', 'Zoomlion',
             'Down-the-hole drilling rigs for blast-hole and surface mining programs.',
-            $S([]), 'Mining', 'drillrig'],
+            $S([]), 'Mining', 'drillrig', ''],
     ];
 
     $stmt = $pdo->prepare(
-        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, sort)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     foreach ($seed as $i => $p) {
         $stmt->execute([...$p, $i]);
+    }
+
+    et_seed_romsan($pdo, count($seed));
+    et_seed_romsan_agri($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
+    // Stamp the catalog version so et_upgrade_catalog() never re-runs these steps.
+    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '5')
+                   ON DUPLICATE KEY UPDATE `value` = '5'")->execute();
+}
+
+/** Romsan Machinery Industry — mobile power, trailers and site containers (catalog v2). */
+function et_seed_romsan(PDO $pdo, int $sortStart): void
+{
+    $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
+    $seed = [
+        ['Mobile Generator & NATO Trailer', 'agriculture', 'Mobile Power', 'Romsan',
+            'Trailer-mounted diesel generator sets with NATO-type towing gear — dependable field power that moves with the job.',
+            $S([['Output', '5 – 1,000 kVA'], ['Alternator', 'Dual / synchronous'], ['Mount', 'NATO-type trailer']]),
+            'Field Power', 'generator', 'assets/products/romsan-mobile-generator.jpg'],
+        ['Tactical Portable Generator', 'agriculture', 'Portable Power', 'Romsan',
+            'Compact enclosed diesel generators light enough for a crew to hand-carry and position anywhere on site.',
+            $S([['Output', '5 / 7.5 / 10 / 33 kVA'], ['Weight', '≤ 300 kg'], ['Handling', 'Hand-carriable']]),
+            'Portable', 'generator', 'assets/products/romsan-tactical-generator.jpg'],
+        ['Container Type Generator', 'agriculture', 'Containerised Power', 'Romsan',
+            'Containerised generating sets for standby and prime power at plants, camps and remote operations.',
+            $S([['Output', '275 – 1,000 kVA'], ['Alternator', 'Dual / synchronous'], ['Format', '20 ft container']]),
+            'Standby Power', 'container', 'assets/products/romsan-container-generator.jpg'],
+        ['Air Cargo Transport Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
+            'NATO-type cargo trailer engineered for air-freight and airside logistics, with an optional 360° rotating deck.',
+            $S([['Type', 'NATO type'], ['Deck', 'Optional 360° rotation'], ['Brakes', 'Pneumatic']]),
+            'Logistics', 'trailer', 'assets/products/romsan-air-cargo-trailer.jpg'],
+        ['Boat Transport Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Purpose-built trailer for moving and launching workboats and patrol craft from unprepared shorelines.',
+            $S([['Duty', 'Boat transport & launch'], ['Towing', 'NATO eye']]),
+            'Logistics', 'trailer', ''],
+        ['Flatbed & Container Shipment Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
+            'Single and tandem-axle flatbeds for machinery, 20 ft containers and general site cargo.',
+            $S([['Axles', 'Single / tandem'], ['Load', '20 ft container'], ['Landing legs', 'Heavy duty']]),
+            'Haulage', 'trailer', 'assets/products/romsan-flatbed-trailer.jpg'],
+        ['Field Living & Utility Containers', 'agriculture', 'Site Containers', 'Romsan',
+            '20 ft accommodation, kitchen, cold-storage, WC & bathroom and living units for remote camps and projects.',
+            $S([['Size', '20 ft'], ['Units', 'Living · Kitchen · Cold store · WC']]),
+            'Camp Setup', 'container', 'assets/products/romsan-living-container.jpg'],
+        ['Heavy-Duty LED Trailer Lamps', 'agriculture', 'Components', 'Romsan',
+            'Sealed 12–24 V LED stop, signal and fog lamps in guarded aluminium housings, built to MIL-STD 810F / 461E.',
+            $S([['Voltage', '12 – 24 VDC'], ['Sealing', 'IP X8'], ['Standard', 'MIL-STD 810F / 461E']]),
+            'Components', 'lamp', 'assets/products/romsan-led-lamp.jpg'],
+    ];
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    foreach ($seed as $i => $p) {
+        $stmt->execute([...$p, $sortStart + $i]);
     }
 }
 
@@ -336,6 +634,15 @@ function flash_get(): ?array
 
 function auth_user(): ?array
 {
+    // Auto sign-out after an hour of inactivity.
+    if (isset($_SESSION['admin'])) {
+        if (($_SESSION['admin_last_seen'] ?? time()) < time() - 3600) {
+            unset($_SESSION['admin'], $_SESSION['admin_last_seen']);
+            flash_set('error', 'You were signed out after an hour of inactivity.');
+            return null;
+        }
+        $_SESSION['admin_last_seen'] = time();
+    }
     return $_SESSION['admin'] ?? null;
 }
 
@@ -387,6 +694,7 @@ const ET_SECTORS = [
     'agriculture'  => 'Agriculture',
     'construction' => 'Construction',
     'mining'       => 'Mining',
+    'power'        => 'Power & Logistics',
 ];
 
 function et_products(?string $sector = null): array
@@ -433,6 +741,10 @@ function et_icons(): array
         'mixer'      => "<svg viewBox='0 0 64 64' $w><rect x='10' y='14' width='30' height='22' rx='2'/><circle cx='18' cy='42' r='4'/><path d='M40 20h12l4 6v6H40'/></svg>",
         'plant'      => "<svg viewBox='0 0 64 64' $w><rect x='8' y='10' width='20' height='30' rx='2'/><rect x='32' y='20' width='20' height='20' rx='2'/></svg>",
         'dumptruck'  => "<svg viewBox='0 0 64 64' $w><rect x='8' y='24' width='28' height='16' rx='2'/><path d='M36 28h12l6 6v6H36'/><circle cx='16' cy='46' r='5'/><circle cx='46' cy='46' r='5'/></svg>",
+        'generator'  => "<svg viewBox='0 0 64 64' $w><rect x='10' y='18' width='36' height='24' rx='2'/><path d='M18 24v12M24 24v12M40 22l-5 9h8l-5 9'/><circle cx='18' cy='50' r='5'/><circle cx='40' cy='50' r='5'/><path d='M46 30h8M46 36h8'/></svg>",
+        'trailer'    => "<svg viewBox='0 0 64 64' $w><path d='M6 36h44M50 36h8l-4-4M10 36V26h32v10'/><circle cx='20' cy='44' r='5'/><circle cx='34' cy='44' r='5'/></svg>",
+        'container'  => "<svg viewBox='0 0 64 64' $w><rect x='8' y='18' width='48' height='28' rx='2'/><path d='M16 22v20M24 22v20M32 22v20M40 22v20M48 22v20'/></svg>",
+        'lamp'       => "<svg viewBox='0 0 64 64' $w><rect x='14' y='16' width='36' height='28' rx='3'/><path d='M14 24h36M14 36h36M26 16v28M38 16v28'/><circle cx='20' cy='30' r='2'/><circle cx='32' cy='30' r='2'/><circle cx='44' cy='30' r='2'/></svg>",
         'crusher'    => "<svg viewBox='0 0 64 64' $w><path d='M8 40l8-20h8l-6 20M28 40l8-20h8l-6 20M8 40h44'/></svg>",
         'machine'    => "<svg viewBox='0 0 64 64' $w><rect x='12' y='22' width='28' height='18' rx='2'/><path d='M40 28h10l4 6v6H40'/><circle cx='20' cy='46' r='5'/><circle cx='44' cy='46' r='5'/></svg>",
     ];

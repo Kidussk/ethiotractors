@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: ethiotractors
-    runtime: docker
-    plan: free
-    healthCheckPath: /index.php
-    envVars:
-      - key: PORT
-        value: "80"

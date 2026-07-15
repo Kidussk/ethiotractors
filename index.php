@@ -4,13 +4,20 @@ require __DIR__ . '/db.php';
 /* ---------- Handle form submissions (PRG pattern) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $anchor = $action === 'newsletter' ? '#footer' : '#contact';
+    $anchor = $action === 'newsletter' ? '#stay' : '#contact';
 
     // Engagement beacon (sendBeacon) — anonymous counters only, so no CSRF.
     if ($action === 'track') {
         $event = (string)($_POST['event'] ?? '');
-        if (in_array($event, ['quote_click'], true)) {
-            et_track($event, (string)($_POST['label'] ?? ''));
+        if (in_array($event, ['quote_click'], true) && !et_throttled('track', 120, 3600)) {
+            et_throttle_hit('track', 3600);
+            $label = mb_substr(trim((string)($_POST['label'] ?? '')), 0, 200);
+            // Only count clicks for products that actually exist, so reports can't be polluted.
+            $stmt = db()->prepare('SELECT COUNT(*) FROM products WHERE name = ?');
+            $stmt->execute([$label]);
+            if ((int)$stmt->fetchColumn() > 0) {
+                et_track($event, $label);
+            }
         }
         http_response_code(204);
         exit;
@@ -25,6 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($_POST['website'])) {
         header("Location: index.php$anchor");
         exit;
+    }
+
+    // Flood protection: cap form submissions per connection per hour.
+    if (in_array($action, ['contact', 'newsletter'], true)) {
+        if (et_throttled($action, 10, 3600)) {
+            flash_set('error', 'Too many submissions from your connection — please try again in a little while, or reach us by phone.');
+            header("Location: index.php$anchor");
+            exit;
+        }
+        et_throttle_hit($action, 3600);
     }
 
     $clean = static fn(string $k, int $max = 200) => mb_substr(trim((string)($_POST[$k] ?? '')), 0, $max);
@@ -66,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute(['Newsletter subscriber', $email, 'Newsletter subscription', 'Requested product news and updates.', 'newsletter']);
             flash_set('success', 'You are subscribed — we will keep you posted on new machinery and offers.');
         }
-        header('Location: index.php#footer');
+        header('Location: index.php#stay');
         exit;
     }
 }
@@ -78,9 +95,11 @@ $s        = et_settings();
 $products = et_products();
 $flash    = flash_get();
 
-$sectorCounts = ['agriculture' => 0, 'construction' => 0, 'mining' => 0];
+$sectorCounts = array_fill_keys(array_keys(ET_SECTORS), 0);
 foreach ($products as $p) {
-    $sectorCounts[$p['sector']]++;
+    if (isset($sectorCounts[$p['sector']])) {
+        $sectorCounts[$p['sector']]++;
+    }
 }
 $totalProducts = count($products);
 $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
@@ -91,64 +110,33 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($s['company_name']) ?> — Agriculture, Construction &amp; Mining Machinery</title>
-<meta name="description" content="Authorized importer and distributor of Doğanlar and Zoomlion machinery in Ethiopia — tractors, implements, excavators, cranes and mining equipment with nationwide delivery and after-sales support.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314170F'/%3E%3Cpath d='M4 24L12 9L16 16L21 7L28 24' stroke='%23C1782E' stroke-width='2.6' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="description" content="Authorized importer and distributor of Doğanlar, Zoomlion and Romsan machinery in Ethiopia — tractors, implements, excavators, cranes, generators, trailers and mining equipment with nationwide delivery and after-sales support.">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/tokens.css">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body id="top">
 
-<!-- ======= Top utility bar ======= -->
-<div class="topbar">
-  <div class="wrap">
-    <div class="tb-group">
-      <?php if ($s['phone']): ?>
-      <a class="tb-item" href="tel:<?= e(preg_replace('/[^+\d]/', '', $s['phone'])) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c1 .3 2 .5 3 .6a2 2 0 011.6 2z"/></svg>
-        <?= e($s['phone']) ?>
-      </a>
-      <?php endif; ?>
-      <?php if ($s['email']): ?>
-      <a class="tb-item" href="mailto:<?= e($s['email']) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
-        <?= e($s['email']) ?>
-      </a>
-      <?php endif; ?>
-      <?php if ($s['hours']): ?>
-      <span class="tb-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <?= e($s['hours']) ?>
-      </span>
-      <?php endif; ?>
-    </div>
-    <span class="tb-note">Authorized importer — Doğanlar · Zoomlion</span>
-  </div>
-</div>
-
-<!-- ======= Header ======= -->
+<!-- ======= Overlay header (transparent over hero, solid on scroll) ======= -->
 <header class="site" id="siteHeader">
-  <div class="wrap nav-row">
+  <div class="hwrap nav-row">
     <a href="#top" class="logo">
-      <svg class="logo-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2 24L11 8L16 16L21 6L30 24" stroke="#C1782E" stroke-width="2.4" stroke-linejoin="round"/>
-      </svg>
-      Ethio<span class="dot">Tractors</span>
+      <img src="assets/logo-white.png" alt="<?= e($s['company_name']) ?>" class="logo-img" width="68" height="48">
     </a>
     <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
     <nav class="main" id="mainnav" aria-label="Main navigation">
       <ul>
-        <li><a href="#industries">Industries</a></li>
+        <li><a href="#top">Home</a></li>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="#industries">Our Industries</a></li>
         <li><a href="#products">Products</a></li>
-        <li><a href="#brands">Brands</a></li>
-        <li><a href="#services">Services</a></li>
-        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#brands">Our Brands</a></li>
         <li><a href="#contact">Contact</a></li>
-        <li><a href="#contact" class="btn btn-solid">Request a Quote <span class="arr">→</span></a></li>
       </ul>
     </nav>
   </div>
@@ -156,96 +144,110 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 
 <main>
 
-  <!-- ======= Hero ======= -->
+  <!-- ======= Full-screen hero ======= -->
   <section class="hero" style="padding:0">
     <div class="hero-bg" aria-hidden="true"></div>
     <div class="wrap">
-      <div class="hero-kicker">Addis Ababa · Ethiopia</div>
-      <h1>Machinery for the <span class="accent">work</span> that builds Ethiopia</h1>
-      <p class="hero-sub">
-        <?= e($s['company_name']) ?> imports and supports agriculture, construction and mining
-        equipment from Doğanlar and Zoomlion — matched to your soil, your site and your budget.
-      </p>
-      <div class="hero-ctas">
-        <a href="#products" class="btn btn-solid">Explore the catalog <span class="arr">→</span></a>
-        <a href="#contact" class="btn btn-inv">Request a quote</a>
-      </div>
-      <div class="hero-stats">
-        <div class="hero-stat"><div class="n" data-count="<?= $totalProducts ?>">0</div><div class="l">Machine &amp; implement lines</div></div>
-        <div class="hero-stat"><div class="n" data-count="3">0</div><div class="l">Industries served</div></div>
-        <div class="hero-stat"><div class="n" data-count="2">0</div><div class="l">Global brand partners</div></div>
-        <div class="hero-stat"><div class="n">∞</div><div class="l">Parts &amp; after-sales support</div></div>
+      <div class="hero-inner">
+        <div class="hero-kicker">EthioTractors PLC</div>
+        <h1 class="hero-statement">We import and support the machinery that farms, builds and mines Ethiopia.</h1>
       </div>
     </div>
-    <a class="hero-scroll" href="#industries">Scroll</a>
   </section>
 
-  <!-- ======= Partner marquee ======= -->
-  <div class="partner-strip" aria-label="Brand partners">
+  <!-- ======= About Us — split with overlapping photo ======= -->
+  <section id="about" class="about-split">
+    <div class="wrap">
+      <div class="ab-grid">
+        <div class="ab-media reveal">
+          <img src="https://images.unsplash.com/photo-1580901368919-7738efb0f87e?auto=format&fit=crop&w=1000&q=80" alt="Excavator at work" loading="lazy">
+          <a href="#industries" class="ab-learn">Learn More</a>
+        </div>
+        <div class="ab-copy reveal">
+          <h2>About Us</h2>
+          <p><?= e($s['company_name']) ?> is a trusted supplier of machinery and advisory services to Ethiopia's agriculture, construction, mining and logistics industries — the authorized importer and distributor of Doğanlar, Zoomlion and Romsan equipment.</p>
+          <p>We are specialists in tractors and tillage implements, earthmoving and quarry machinery, cranes and concrete equipment, mining machinery, and mobile power and trailer systems — delivered, commissioned and supported nationwide.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= Est. band ======= -->
+  <section class="est-band">
+    <div class="wrap">
+      <div class="est-inner reveal">
+        <div class="est-mark">Addis Ababa</div>
+        <h2>About Us</h2>
+        <p><?= e($s['company_name']) ?> supplies products and advisory services to Ethiopia's producers and contractors. From pre-purchase advice to commissioning, genuine parts and after-sales support, we stay involved for the working life of every machine we import.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= Industries We Serve — expanding accordion ======= -->
+  <section id="industries" class="industries">
+    <div class="wrap">
+      <div class="ind-head reveal">
+        <div>
+          <h2>Industries We Serve</h2>
+          <p>Our machines work on farms, construction sites, mining operations and remote camps across Ethiopia.<br><br>We offer pre-purchase advisory, assembly and setting up of machines, product sales, parts sales, and delivery with commissioning nationwide.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ind-grid reveal">
+      <a href="#products" class="ind-card con" data-goto-sector="construction">
+        <div class="bg"></div>
+        <div class="inner">
+          <h3>Construction</h3>
+          <span class="go">Learn More</span>
+        </div>
+      </a>
+      <a href="#products" class="ind-card mine" data-goto-sector="mining">
+        <div class="bg"></div>
+        <div class="inner">
+          <h3>Mining</h3>
+          <span class="go">Learn More</span>
+        </div>
+      </a>
+      <a href="#products" class="ind-card agri" data-goto-sector="agriculture">
+        <div class="bg"></div>
+        <div class="inner">
+          <h3>Agriculture</h3>
+          <span class="go">Learn More</span>
+        </div>
+      </a>
+      <a href="#products" class="ind-card pow" data-goto-sector="power">
+        <div class="bg"></div>
+        <div class="inner">
+          <h3>Power &amp; Logistics</h3>
+          <span class="go">Learn More</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ======= Partner logo marquee ======= -->
+  <?php
+  // Logos only — repeated a few times per set so the loop is wider than any screen.
+  $brandLogos = static function (): void { ?>
+        <span class="mq-logo mq-doganlar"><img src="assets/brands/doganlar.png" alt="Doğanlar Agriculture" loading="lazy"></span>
+        <span class="mq-sep"></span>
+        <span class="mq-logo mq-zoomlion" role="img" aria-label="Zoomlion">
+          <svg viewBox="0 0 322 44" xmlns="http://www.w3.org/2000/svg"><text x="0" y="36" font-family="Sora, Arial, sans-serif" font-size="38" font-weight="800" letter-spacing="1" fill="#00A54F">ZOOMLION</text></svg>
+        </span>
+        <span class="mq-sep"></span>
+        <span class="mq-logo mq-romsan"><img src="assets/brands/romsan.png" alt="Romsan Machinery Industry" loading="lazy"></span>
+        <span class="mq-sep"></span>
+  <?php };
+  ?>
+  <div class="partner-strip" aria-label="Brands we represent">
     <div class="marquee">
       <?php for ($i = 0; $i < 2; $i++): ?>
       <div class="marquee-set" <?= $i ? 'aria-hidden="true"' : '' ?>>
-        <span class="mq-brand">DOĞANLAR<small>Agriculture — Turkey</small></span>
-        <span class="mq-sep"></span>
-        <span class="mq-word">Authorized Importer &amp; Distributor</span>
-        <span class="mq-sep"></span>
-        <span class="mq-brand">ZOOMLION<small>Heavy Industry — China</small></span>
-        <span class="mq-sep"></span>
-        <span class="mq-word">Nationwide Delivery · Genuine Parts</span>
-        <span class="mq-sep"></span>
-        <span class="mq-brand">ETHIOTRACTORS<small>Addis Ababa — Ethiopia</small></span>
-        <span class="mq-sep"></span>
-        <span class="mq-word">Field · Site · Mine</span>
-        <span class="mq-sep"></span>
+        <?php for ($r = 0; $r < 3; $r++) { $brandLogos(); } ?>
       </div>
       <?php endfor; ?>
     </div>
   </div>
-
-  <!-- ======= Industries ======= -->
-  <section id="industries">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <div>
-          <span class="eyebrow">What We Move</span>
-          <h2>Three Sectors,<br>One Importer</h2>
-        </div>
-        <p class="lede">From breaking soil to breaking ground, EthioTractors sources and supports the machinery Ethiopia's producers and contractors run on.</p>
-      </div>
-      <div class="ind-grid">
-        <a href="#products" class="ind-card agri reveal" data-goto-sector="agriculture">
-          <span class="count-chip"><?= $sectorCounts['agriculture'] ?> product lines</span>
-          <div class="bg"></div>
-          <div class="inner">
-            <span class="num">01 — The Field</span>
-            <h3>Agriculture</h3>
-            <p>Tractors, harvesters, ploughs, harrows, cultivators and rotovators for Ethiopian soil.</p>
-            <span class="go">View products <span class="arr">→</span></span>
-          </div>
-        </a>
-        <a href="#products" class="ind-card con reveal" data-goto-sector="construction">
-          <span class="count-chip"><?= $sectorCounts['construction'] ?> product lines</span>
-          <div class="bg"></div>
-          <div class="inner">
-            <span class="num">02 — The Site</span>
-            <h3>Construction</h3>
-            <p>Excavators, loaders, bulldozers, cranes and concrete equipment for Ethiopia's growth.</p>
-            <span class="go">View products <span class="arr">→</span></span>
-          </div>
-        </a>
-        <a href="#products" class="ind-card mine reveal" data-goto-sector="mining">
-          <span class="count-chip"><?= $sectorCounts['mining'] ?> product lines</span>
-          <div class="bg"></div>
-          <div class="inner">
-            <span class="num">03 — The Mine</span>
-            <h3>Mining</h3>
-            <p>Dump trucks, drill rigs, crushers and screens for pit-to-stockpile operations.</p>
-            <span class="go">View products <span class="arr">→</span></span>
-          </div>
-        </a>
-      </div>
-    </div>
-  </section>
 
   <!-- ======= Products ======= -->
   <section id="products">
@@ -322,7 +324,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
           <span class="eyebrow">Who We Represent</span>
           <h2>Brands We Import</h2>
         </div>
-        <p class="lede">Two manufacturers, decades of engineering — brought to Ethiopia with genuine parts and factory-backed support.</p>
+        <p class="lede">Three manufacturers, decades of engineering — brought to Ethiopia with genuine parts and factory-backed support.</p>
       </div>
       <div class="brand-cards">
         <div class="brand-card doganlar reveal">
@@ -345,6 +347,17 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
           <div class="b-foot">
             <a href="https://en.zoomlion.com" target="_blank" rel="noopener">en.zoomlion.com ↗</a>
             <span class="b-mark">ZL</span>
+          </div>
+        </div>
+        <div class="brand-card romsan reveal">
+          <div>
+            <div class="origin">Turkey — Trailer &amp; Mobile Power Manufacturer</div>
+            <h3>Romsan Machinery</h3>
+            <p>NATO-type transport trailers, mobile and containerised generator sets, and field living containers — heavy-duty logistics equipment built in Balıkesir to defence-grade standards.</p>
+          </div>
+          <div class="b-foot">
+            <a href="https://romsan.com" target="_blank" rel="noopener">romsan.com ↗</a>
+            <span class="b-mark">RM</span>
           </div>
         </div>
       </div>
@@ -453,22 +466,11 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
         </details>
         <details class="faq">
           <summary>Which brands do you officially represent? <span class="ic">+</span></summary>
-          <p class="faq-a">We are an authorized importer and distributor of Doğanlar Agriculture (Turkey) tillage implements and Zoomlion (China) agriculture, construction and mining machinery — with more brand partnerships expanding.</p>
+          <p class="faq-a">We are an authorized importer and distributor of Doğanlar Agriculture (Turkey) tillage implements, Zoomlion (China) agriculture, construction and mining machinery, and Romsan (Turkey) trailers, generators and field containers — with more brand partnerships expanding.</p>
         </details>
       </div>
     </div>
   </section>
-
-  <!-- ======= CTA band ======= -->
-  <div class="cta-band">
-    <div class="wrap">
-      <div>
-        <h2>Have a farm to equip or a site to build?</h2>
-        <p>Talk to our team — quotes within one business day</p>
-      </div>
-      <a href="#contact" class="btn btn-inv">Request a quote <span class="arr">→</span></a>
-    </div>
-  </div>
 
   <!-- ======= Contact ======= -->
   <section id="contact" style="background:var(--paper-dim)">
@@ -494,7 +496,14 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
             <?php if ($s['phone']): ?>
             <div>
               <dt><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c1 .3 2 .5 3 .6a2 2 0 011.6 2z"/></svg> Phone</dt>
-              <dd><a href="tel:<?= e(preg_replace('/[^+\d]/', '', $s['phone'])) ?>"><?= e($s['phone']) ?></a><?= $s['phone2'] ? ' · <a href="tel:' . e(preg_replace('/[^+\d]/', '', $s['phone2'])) . '">' . e($s['phone2']) . '</a>' : '' ?></dd>
+              <dd><?php
+                $phones = array_values(array_filter([$s['phone'] ?? '', $s['phone2'] ?? '', $s['phone3'] ?? '']));
+                $links = [];
+                foreach ($phones as $num) {
+                    $links[] = '<a href="tel:' . e(preg_replace('/[^+\d]/', '', $num)) . '">' . e($num) . '</a>';
+                }
+                echo implode(' · ', $links);
+              ?></dd>
             </div>
             <?php endif; ?>
             <?php if ($s['email']): ?>
@@ -559,6 +568,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
                   <option>Agriculture</option>
                   <option>Construction</option>
                   <option>Mining</option>
+                  <option>Power &amp; Logistics</option>
                   <option>Other</option>
                 </select>
               </div>
@@ -583,47 +593,73 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     </div>
   </section>
 
+  <!-- ======= Stay Connected ======= -->
+  <section id="stay" class="stay">
+    <div class="wrap">
+      <div class="stay-inner reveal">
+        <h2>Stay<br>Connected</h2>
+        <div class="stay-right">
+          <div class="stay-socials">
+            <?php if ($s['telegram']): ?><a href="<?= e($s['telegram']) ?>" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M21 4L2 11l6 2 2 6 3-4 5 3z"/></svg></a><?php endif; ?>
+            <?php if ($s['facebook']): ?><a href="<?= e($s['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M15 4h-2a4 4 0 00-4 4v3H7v4h2v6h4v-6h3l1-4h-4V8a1 1 0 011-1h3z"/></svg></a><?php endif; ?>
+            <?php if ($s['linkedin']): ?><a href="<?= e($s['linkedin']) ?>" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 10v7M7 7v.01M12 17v-4a2 2 0 014 0v4M12 13v4"/></svg></a><?php endif; ?>
+          </div>
+          <form class="news-form" method="post" action="index.php#stay">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="newsletter">
+            <input type="email" name="email" placeholder="Your email address" aria-label="Email for newsletter" required>
+            <button type="submit">Join</button>
+          </form>
+          <p class="footer-note">New machinery arrivals and offers. No spam.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <!-- ======= Footer ======= -->
 <footer id="footer">
   <div class="wrap">
-    <div class="footer-top">
-      <div class="footer-brand">
-        <a href="#top" class="logo">Ethio<span class="dot">Tractors</span></a>
-        <p>Importing agriculture, construction and mining machinery for Ethiopia — from field to foundation.</p>
+    <nav class="footer-nav" aria-label="Footer navigation">
+      <a href="#top">Home</a>
+      <a href="#about">About Us</a>
+      <a href="#industries">Our Sectors</a>
+      <a href="#products">Products</a>
+      <a href="#brands">Our Brands</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="footer-id">
+      <div class="footer-roundel" aria-hidden="true">
+        <img src="assets/logo.png" alt="" class="footer-logo-img" width="120" height="120">
       </div>
-      <div>
-        <h4>Sectors</h4>
-        <ul>
-          <li><a href="#products">Agriculture</a></li>
-          <li><a href="#products">Construction</a></li>
-          <li><a href="#products">Mining</a></li>
-        </ul>
+      <div class="footer-addr">
+        <div class="f-name"><?= mb_strtoupper(e($s['company_name'])) ?></div>
+        <div class="f-lines"><?= e($s['address'] ?: 'Addis Ababa, Ethiopia') ?><?= $s['branches'] ? '<br>Branches: ' . e($s['branches']) : '' ?></div>
       </div>
-      <div>
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#brands">Brands</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#faq">FAQ</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Stay Updated</h4>
-        <form class="news-form" method="post" action="index.php#footer">
-          <?= csrf_field() ?>
-          <input type="hidden" name="action" value="newsletter">
-          <input type="email" name="email" placeholder="Your email address" aria-label="Email for newsletter" required>
-          <button type="submit">Join</button>
-        </form>
-        <p class="footer-note">New machinery arrivals and offers. No spam.</p>
+      <div class="footer-tels">
+        <?php if ($s['phone']): ?>
+        <a href="tel:<?= e(preg_replace('/[^+\d]/', '', $s['phone'])) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c1 .3 2 .5 3 .6a2 2 0 011.6 2z"/></svg>
+          Tel: <?= e($s['phone']) ?>
+        </a>
+        <?php endif; ?>
+        <?php foreach (array_filter([$s['phone2'] ?? '', $s['phone3'] ?? '']) as $extraPhone): ?>
+        <a href="tel:<?= e(preg_replace('/[^+\d]/', '', $extraPhone)) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c1 .3 2 .5 3 .6a2 2 0 011.6 2z"/></svg>
+          Tel: <?= e($extraPhone) ?>
+        </a>
+        <?php endforeach; ?>
+        <?php if ($s['email']): ?>
+        <a href="mailto:<?= e($s['email']) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          <?= e($s['email']) ?>
+        </a>
+        <?php endif; ?>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© <?= date('Y') ?> <?= e($s['company_name']) ?>. All rights reserved.</span>
-      <span><?= $s['trade_license'] ? 'Trade License No. ' . e($s['trade_license']) . ' · ' : '' ?>Addis Ababa, Ethiopia · <a href="admin.php">Staff Login</a></span>
+      <span>© Copyright <?= date('Y') ?> <?= e($s['company_name']) ?>. All Rights Reserved.<?= $s['trade_license'] ? ' · Trade License No. ' . e($s['trade_license']) : '' ?> · <a href="admin.php">Staff Login</a></span>
     </div>
   </div>
 </footer>

@@ -17,13 +17,10 @@
   border-radius:var(--r-lg);box-shadow:var(--shadow-md);
 }
 .login-logo{
-  font-family:var(--display);font-size:1.4rem;font-weight:800;
-  letter-spacing:-.02em;display:flex;align-items:center;gap:11px;margin-bottom:6px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:6px;
 }
-.login-logo .dot{color:var(--brand)}
-.login-logo svg{
-  width:40px;height:40px;flex:none;padding:8px;
-  background:var(--ink);border-radius:12px;
+.login-logo-img{
+  display:block;height:58px;width:auto;max-width:100%;object-fit:contain;
 }
 .login-sub{
   font-size:.78rem;font-weight:600;letter-spacing:.1em;
@@ -61,14 +58,12 @@
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
 }
 .sb-logo{
-  display:flex;align-items:center;gap:11px;padding:22px 20px;
-  font-family:var(--display);font-size:1.1rem;font-weight:800;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:11px;padding:18px 16px;
   border-bottom:1px solid var(--line-inv);text-decoration:none;color:var(--white);
 }
-.sb-logo .dot{color:var(--brand)}
-.sb-logo svg{
-  width:36px;height:36px;flex:none;padding:7px;
-  background:rgba(251,250,247,.08);border-radius:10px;
+.sb-logo-img{
+  display:block;height:46px;width:auto;max-width:100%;object-fit:contain;
+  background:var(--white);border-radius:8px;padding:4px 6px;
 }
 .sb-logo small{
   display:block;font-size:.6rem;font-weight:500;

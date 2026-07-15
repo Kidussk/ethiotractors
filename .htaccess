@@ -1,6 +1,14 @@
 DirectoryIndex index.php
 
-# Block direct access to SQLite backups if any leak into web root
-<FilesMatch "\.(sqlite|sqlite3|db)$">
+# Stop directory listings anywhere on the site.
+Options -Indexes
+
+# config.php is only ever include()d — never serve it directly.
+<Files "config.php">
+Require all denied
+</Files>
+
+# Block direct access to database dumps and backups if any leak into web root
+<FilesMatch "\.(?i:sqlite|sqlite3|db|sql|bak|old)$">
 Require all denied
 </FilesMatch>
