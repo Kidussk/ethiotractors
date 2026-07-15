@@ -115,8 +115,9 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/tokens.css">
-<link rel="stylesheet" href="assets/site.css">
+<?php // Version the styles by mtime so browsers can't pair cached CSS with new markup. ?>
+<link rel="stylesheet" href="assets/tokens.css?v=<?= filemtime(__DIR__ . '/assets/tokens.css') ?>">
+<link rel="stylesheet" href="assets/site.css?v=<?= filemtime(__DIR__ . '/assets/site.css') ?>">
 </head>
 <body id="top">
 
@@ -710,6 +711,6 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 </div>
 <?php endif; ?>
 
-<script src="assets/site.js"></script>
+<script src="assets/site.js?v=<?= filemtime(__DIR__ . '/assets/site.js') ?>"></script>
 </body>
 </html>
