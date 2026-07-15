@@ -1,12 +1,15 @@
+# Live credentials — keep on the server only (never overwrite via Git deploy)
+/config.php
+
 # Runtime data (created on first visit)
 /data/*.sqlite
 /data/*.sqlite-*
 
-# User uploads (keep folder + .htaccess)
+# User uploads (keep folder + .htaccess across deploys)
 /uploads/*
 !/uploads/.htaccess
 
-# Local / editor
+# Local / editor / packaging
 .claude/
 *.log
 .DS_Store

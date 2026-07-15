@@ -3,12 +3,23 @@ DirectoryIndex index.php
 # Stop directory listings anywhere on the site.
 Options -Indexes
 
-# config.php is only ever include()d — never serve it directly.
+# Credentials — include() only, never serve directly.
 <Files "config.php">
 Require all denied
 </Files>
+<Files "config.example.php">
+Require all denied
+</Files>
 
-# Block direct access to database dumps and backups if any leak into web root
-<FilesMatch "\.(?i:sqlite|sqlite3|db|sql|bak|old)$">
+# Dev / import tools must not be reachable on production.
+<FilesMatch "^(dbtest|import_img_products)\.php$">
 Require all denied
 </FilesMatch>
+
+# Block direct access to database dumps and backups if any leak into web root
+<FilesMatch "\.(?i:sqlite|sqlite3|db|sql|bak|old|py)$">
+Require all denied
+</FilesMatch>
+
+# Offline catalog scripts are not part of the public site
+RedirectMatch 403 (?i)^/scripts/

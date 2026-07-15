@@ -21,6 +21,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!is_readable(__DIR__ . '/config.php')) {
+    http_response_code(503);
+    exit('Missing config.php. On the server, copy config.example.php to config.php and set your database credentials.');
+}
 require __DIR__ . '/config.php';
 
 /* ---------- Errors: log everything, never show details to visitors ---------- */
