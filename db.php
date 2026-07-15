@@ -145,6 +145,94 @@ function et_upgrade_catalog(PDO $pdo): void
         $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '5')
                        ON DUPLICATE KEY UPDATE `value` = '5'")->execute();
     }
+
+    if ($version < 6) {
+        // v6: manufacturer photos for the lines seeded without one, the real Zoomlion
+        // tractor line-up in place of the generic series card, and removal of the one
+        // line still left with no photograph.
+        $imgUpd = $pdo->prepare('UPDATE products SET image_url = ? WHERE name = ?');
+        foreach (et_catalog_v6_image_updates() as $name => $url) {
+            $imgUpd->execute([$url, $name]);
+        }
+        $del = $pdo->prepare('DELETE FROM products WHERE name = ?');
+        foreach (et_catalog_v6_removals() as $name) {
+            $del->execute([$name]);
+        }
+        $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn();
+        et_seed_zoomlion_tractors($pdo, $sort);
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '6')
+                       ON DUPLICATE KEY UPDATE `value` = '6'")->execute();
+    }
+}
+
+/** Zoomlion photos for the lines that shipped with no image at all (v6). */
+function et_catalog_v6_image_updates(): array
+{
+    return [
+        'Baler'                            => 'assets/products/zoomlion-baler.png',
+        'Grain Dryer'                      => 'assets/products/zoomlion-grain-dryer.png',
+        'Construction Hoist'               => 'assets/products/zoomlion-construction-hoist.png',
+        'Rotary Drilling Rig'              => 'assets/products/zoomlion-rotary-drill-rig.png',
+        'Concrete Batching Plant'          => 'assets/products/zoomlion-batching-plant.png',
+        'Mining Dump Truck'                => 'assets/products/zoomlion-mining-dump-truck.png',
+        'Mobile Crushers & Screens'        => 'assets/products/zoomlion-mobile-crusher.png',
+        'Surface DTH Drill Rig'            => 'assets/products/zoomlion-dth-drill.png',
+    ];
+}
+
+/**
+ * Lines dropped in v6 — nothing in the manufacturer catalogues to photograph them
+ * with, and the generic tractor card is replaced by the named models below.
+ */
+function et_catalog_v6_removals(): array
+{
+    return ['Boat Transport Trailer', 'Zoomlion Tractor Series'];
+}
+
+/** Zoomlion's tractor line-up, from the manufacturer's product site (v6). */
+function et_seed_zoomlion_tractors(PDO $pdo, int $sortStart): void
+{
+    $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
+    $seed = [
+        ['PQ Series Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'High-horsepower tractors for family farms, large-scale operations and agricultural service providers — 39.3% torque reserve for heavy draft loads and up to 13 hours on one tank.',
+            $S([['Horsepower', '260 / 275 hp'], ['Fuel tank', '630 L'], ['Gears', '48F+24R'], ['Speed', '0.24 – 38.85 km/h']]),
+            'High Horsepower', 'tractor', 'assets/products/zoomlion-tractor-pq-series.png'],
+        ['PV3204 Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'Mid-to-high-end tractor for intensive tillage, seeding, harvesting, crop management, transport and PTO-powered operations.',
+            $S([['Horsepower', '320 hp'], ['Fuel tank', '630 L'], ['Gears', '48F+24R']]),
+            'High Horsepower', 'tractor', 'assets/products/zoomlion-tractor-pv3204.png'],
+        ['PL2304 Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'Heavy-duty power shift tractor for intensive tillage, seeding, forage harvesting, spraying, transport and high-draft work.',
+            $S([['Engine', 'Weichai WP7'], ['Fuel tank', '400 L'], ['Gears', '40F+40R'], ['Speed', '0.4 – 40 km/h']]),
+            'Power Shift', 'tractor', 'assets/products/zoomlion-tractor-pl2304.png'],
+        ['PL1604 Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'Mid-to-high-end multi-purpose power shift tractor for tillage, PTO-powered work, seeding, harvesting, cultivation and transport in dryland farming.',
+            $S([['Horsepower', '160 hp'], ['Fuel tank', '375 L'], ['Gears', '48F+24R']]),
+            'Power Shift', 'tractor', 'assets/products/zoomlion-tractor-pl1604.png'],
+        ['RG Series Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'High-horsepower, multi-purpose tractors developed for large-scale dryland farming.',
+            $S([['Horsepower', '160 – 200 hp'], ['Fuel tank', '375 L'], ['Gears', '16F+16R']]),
+            'Dryland', 'tractor', 'assets/products/zoomlion-tractor-rg-series.png'],
+        ['RL1604 Tractor', 'agriculture', 'Tractors', 'Zoomlion',
+            'Heavy-duty tractor for medium and deep tillage, planting, harvest support, material handling and transport — suited to intensive sugarcane work.',
+            $S([['Horsepower', '160 hp'], ['Fuel tank', '375 L'], ['Gears', '32F+32R']]),
+            'Sugarcane', 'tractor', 'assets/products/zoomlion-tractor-rl1604.png'],
+    ];
+
+    $exists = $pdo->prepare('SELECT id FROM products WHERE name = ? LIMIT 1');
+    $stmt = $pdo->prepare(
+        'INSERT INTO products (name, sector, category, brand, description, specs, tags, icon, image_url, sort)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $sort = $sortStart;
+    foreach ($seed as $p) {
+        $exists->execute([$p[0]]);
+        if ($exists->fetchColumn()) {
+            continue;
+        }
+        $stmt->execute([...$p, $sort++]);
+    }
 }
 
 /** Doğanlar photos refreshed from the Romsan product catalogue (v4). */
@@ -246,7 +334,6 @@ function et_default_product_images(): array
         'Tiller / Scissor Spring Tiller'     => 'assets/products/doganlar-tiller.jpg',
         'Rotovator — Field / Garden / Vertical' => 'assets/products/doganlar-rotovator.jpg',
         // Zoomlion — freely-licensed photos (see assets/products/IMAGE-CREDITS.md)
-        'Zoomlion Tractor Series'            => 'assets/products/zoomlion-tractor.jpg',
         'Combine Harvester'                  => 'assets/products/zoomlion-combine.jpg',
         'Sugarcane Harvester'                => 'assets/products/zoomlion-sugarcane.jpg',
         'Excavators — Mini to Large'         => 'assets/products/zoomlion-excavator.jpg',
@@ -396,9 +483,7 @@ function et_seed_products(PDO $pdo): void
     $S = static fn(array $pairs) => json_encode($pairs, JSON_UNESCAPED_UNICODE);
     $seed = [
         // ---- Agriculture — power & harvest (Zoomlion) ----
-        ['Zoomlion Tractor Series', 'agriculture', 'Tractors', 'Zoomlion',
-            'Row-crop and utility tractors sized for smallholder plots up to commercial farm operations.',
-            $S([]), 'Power Unit', 'tractor', 'assets/products/zoomlion-tractor.jpg'],
+        // Tractors are seeded from the manufacturer line-up by et_seed_zoomlion_tractors().
         ['Combine Harvester', 'agriculture', 'Harvesters', 'Zoomlion',
             'Grain harvesting with integrated threshing and cleaning for cereal crops.',
             $S([]), 'Harvest', 'harvester', 'assets/products/zoomlion-combine.jpg'],
@@ -407,10 +492,10 @@ function et_seed_products(PDO $pdo): void
             $S([]), 'Harvest', 'cane', 'assets/products/zoomlion-sugarcane.jpg'],
         ['Baler', 'agriculture', 'Post-Harvest', 'Zoomlion',
             'Compresses hay or straw into transportable, storable bales after harvest.',
-            $S([]), 'Post-Harvest', 'baler', ''],
+            $S([]), 'Post-Harvest', 'baler', 'assets/products/zoomlion-baler.png'],
         ['Grain Dryer', 'agriculture', 'Post-Harvest', 'Zoomlion',
             'Reduces post-harvest moisture loss and supports safe long-term grain storage.',
-            $S([]), 'Post-Harvest', 'dryer', ''],
+            $S([]), 'Post-Harvest', 'dryer', 'assets/products/zoomlion-grain-dryer.png'],
 
         // ---- Agriculture — ploughs (Doğanlar) ----
         ['Gas-Safe Reversible Plough', 'agriculture', 'Ploughs', 'Doğanlar',
@@ -488,30 +573,30 @@ function et_seed_products(PDO $pdo): void
             $S([]), 'Hoisting', 'tower', 'assets/products/zoomlion-tower-crane.jpg'],
         ['Construction Hoist', 'construction', 'Cranes & Hoisting', 'Zoomlion',
             'Personnel and material lifts for high-rise site logistics.',
-            $S([]), 'Hoisting', 'hoist', ''],
+            $S([]), 'Hoisting', 'hoist', 'assets/products/zoomlion-construction-hoist.png'],
         ['Rotary Drilling Rig', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'Bored pile foundation drilling for high-load structures.',
-            $S([]), 'Foundation', 'drillrig', ''],
+            $S([]), 'Foundation', 'drillrig', 'assets/products/zoomlion-rotary-drill-rig.png'],
         ['Truck Mixer & Concrete Pumps', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'Truck mixers, truck-mounted pumps, trailer pumps and placing booms.',
             $S([]), 'Concrete', 'mixer', 'assets/products/zoomlion-concrete-pump.jpg'],
         ['Concrete Batching Plant', 'construction', 'Foundation & Concrete', 'Zoomlion',
             'On-site or centralized concrete batching for continuous supply.',
-            $S([]), 'Concrete', 'plant', ''],
+            $S([]), 'Concrete', 'plant', 'assets/products/zoomlion-batching-plant.png'],
 
         // ---- Mining (Zoomlion) ----
         ['Mining Dump Truck', 'mining', 'Haulage', 'Zoomlion',
             'High-payload haulage built for continuous pit-to-stockpile cycles.',
-            $S([]), 'Mining', 'dumptruck', ''],
+            $S([]), 'Mining', 'dumptruck', 'assets/products/zoomlion-mining-dump-truck.png'],
         ['Large Mining Excavator', 'mining', 'Excavation', 'Zoomlion',
             'Mine-class excavators for overburden removal and bulk material loading.',
             $S([]), 'Mining', 'excavator', 'assets/products/zoomlion-mining-excavator.jpg'],
         ['Mobile Crushers & Screens', 'mining', 'Processing', 'Zoomlion',
             'On-site crushing and screening, plus fixed crushers for aggregate production.',
-            $S([]), 'Mining', 'crusher', ''],
+            $S([]), 'Mining', 'crusher', 'assets/products/zoomlion-mobile-crusher.png'],
         ['Surface DTH Drill Rig', 'mining', 'Drilling', 'Zoomlion',
             'Down-the-hole drilling rigs for blast-hole and surface mining programs.',
-            $S([]), 'Mining', 'drillrig', ''],
+            $S([]), 'Mining', 'drillrig', 'assets/products/zoomlion-dth-drill.png'],
     ];
 
     $stmt = $pdo->prepare(
@@ -524,9 +609,10 @@ function et_seed_products(PDO $pdo): void
 
     et_seed_romsan($pdo, count($seed));
     et_seed_romsan_agri($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
+    et_seed_zoomlion_tractors($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
     // Stamp the catalog version so et_upgrade_catalog() never re-runs these steps.
-    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '5')
-                   ON DUPLICATE KEY UPDATE `value` = '5'")->execute();
+    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '6')
+                   ON DUPLICATE KEY UPDATE `value` = '6'")->execute();
 }
 
 /** Romsan Machinery Industry — mobile power, trailers and site containers (catalog v2). */
@@ -550,10 +636,6 @@ function et_seed_romsan(PDO $pdo, int $sortStart): void
             'NATO-type cargo trailer engineered for air-freight and airside logistics, with an optional 360° rotating deck.',
             $S([['Type', 'NATO type'], ['Deck', 'Optional 360° rotation'], ['Brakes', 'Pneumatic']]),
             'Logistics', 'trailer', 'assets/products/romsan-air-cargo-trailer.jpg'],
-        ['Boat Transport Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
-            'Purpose-built trailer for moving and launching workboats and patrol craft from unprepared shorelines.',
-            $S([['Duty', 'Boat transport & launch'], ['Towing', 'NATO eye']]),
-            'Logistics', 'trailer', ''],
         ['Flatbed & Container Shipment Trailer', 'agriculture', 'Transport Trailers', 'Romsan',
             'Single and tandem-axle flatbeds for machinery, 20 ft containers and general site cargo.',
             $S([['Axles', 'Single / tandem'], ['Load', '20 ft container'], ['Landing legs', 'Heavy duty']]),

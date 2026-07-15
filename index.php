@@ -144,13 +144,41 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
 
 <main>
 
-  <!-- ======= Full-screen hero ======= -->
+  <!-- ======= Hero — full-bleed auto-advancing banner ======= -->
+  <?php
+  $heroSlides = [
+      ['img' => 'assets/hero/hero-01.jpg', 'alt' => 'Zoomlion excavators and dozers working a construction site'],
+      ['img' => 'assets/hero/hero-02.jpg', 'alt' => 'Zoomlion machinery lined up on site'],
+      ['img' => 'assets/hero/hero-03.jpg', 'alt' => 'Zoomlion machinery at work'],
+  ];
+  ?>
   <section class="hero" style="padding:0">
-    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-track" aria-hidden="true">
+      <?php foreach ($heroSlides as $i => $slide): ?>
+      <div class="hero-slide<?= $i === 0 ? ' is-active' : '' ?>">
+        <img src="<?= e($slide['img']) ?>" alt="<?= e($slide['alt']) ?>" width="1920" height="456"
+             <?= $i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>>
+      </div>
+      <?php endforeach; ?>
+    </div>
     <div class="wrap">
       <div class="hero-inner">
         <div class="hero-kicker">EthioTractors PLC</div>
         <h1 class="hero-statement">We import and support the machinery that farms, builds and mines Ethiopia.</h1>
+      </div>
+    </div>
+    <div class="hero-dots">
+      <div class="wrap">
+        <div class="dots" id="heroDots" role="tablist" aria-label="Hero slides">
+          <?php foreach ($heroSlides as $i => $slide): ?>
+          <button class="hero-dot<?= $i === 0 ? ' is-active' : '' ?>" data-slide="<?= $i ?>"
+                  role="tab" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+                  aria-label="Slide <?= $i + 1 ?>">
+            <span class="num"><?= sprintf('%02d', $i + 1) ?></span>
+            <span class="dot-line"><span class="fill"></span></span>
+          </button>
+          <?php endforeach; ?>
+        </div>
       </div>
     </div>
   </section>
@@ -281,7 +309,8 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
             $search = mb_strtolower($p['name'] . ' ' . $p['category'] . ' ' . $p['brand'] . ' ' . $p['tags']);
         ?>
         <article class="pcard reveal" data-sector="<?= e($p['sector']) ?>" data-search="<?= e($search) ?>">
-          <div class="art">
+          <?php // Cut-outs ship as transparent PNGs; photographs are JPEGs. ?>
+          <div class="art<?= preg_match('/\.png$/i', (string)$p['image_url']) ? ' is-cutout' : '' ?>">
             <span class="sector-flag <?= e($p['sector']) ?>"><?= e(ET_SECTORS[$p['sector']]) ?></span>
             <?php if ($p['image_url']): ?>
               <img src="<?= e($p['image_url']) ?>" alt="<?= e($p['name']) ?>" loading="lazy">

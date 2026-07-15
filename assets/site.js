@@ -73,6 +73,59 @@
     revealEls.forEach(function (el) { el.classList.add('in'); });
   }
 
+  /* ---------- Hero banner: auto-advancing slides ---------- */
+  (function () {
+    var slides = document.querySelectorAll('.hero-slide');
+    var dots = document.querySelectorAll('.hero-dot');
+    if (slides.length < 2) return;
+
+    var DWELL = 7000;
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var index = 0;
+    var timer = null;
+
+    function paint(i) {
+      index = i;
+      slides.forEach(function (s, n) { s.classList.toggle('is-active', n === i); });
+      dots.forEach(function (d, n) {
+        var on = n === i;
+        d.classList.toggle('is-active', on);
+        d.setAttribute('aria-selected', on ? 'true' : 'false');
+        var fill = d.querySelector('.fill');
+        if (!fill) return;
+        fill.style.transition = 'none';
+        fill.style.transform = 'scaleX(0)';
+        if (!on) return;
+        if (reduced.matches) { fill.style.transform = 'scaleX(1)'; return; }
+        void fill.offsetWidth;  // flush the reset so the fill replays from zero
+        fill.style.transition = 'transform ' + DWELL + 'ms linear';
+        fill.style.transform = 'scaleX(1)';
+      });
+    }
+
+    function schedule() {
+      clearTimeout(timer);
+      if (reduced.matches || document.hidden) return;
+      timer = setTimeout(function () { go(index + 1); }, DWELL);
+    }
+
+    function go(i) {
+      paint((i + slides.length) % slides.length);
+      schedule();
+    }
+
+    dots.forEach(function (d, n) {
+      d.addEventListener('click', function () { go(n); });
+    });
+
+    // A backgrounded tab would drift out of step with the fill — restart on return.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) clearTimeout(timer); else go(index);
+    });
+
+    go(0);
+  }());
+
   /* ---------- Hero stat counters ---------- */
   function animateCount(el) {
     var target = parseInt(el.getAttribute('data-count'), 10);

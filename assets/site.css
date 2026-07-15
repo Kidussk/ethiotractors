@@ -46,32 +46,64 @@ nav.main a:not(.btn).active::after{
 .menu-toggle svg{width:28px;height:28px}
 
 /* ---------- Full-screen hero ---------- */
+/* Banner strip sized to the artwork's own 1920×456 ratio, so the machinery is
+   never cropped on desktop. Narrower screens would leave a sliver, so they trade
+   a centred crop for enough height to read the statement over. */
 .hero{
-  position:relative;min-height:100vh;min-height:100svh;
+  position:relative;aspect-ratio:1920/456;
   display:flex;align-items:center;overflow:hidden;
-  color:var(--white);
+  color:var(--white);background:#141414;
 }
-.hero-bg{position:absolute;inset:0;background:#141414}
-.hero-bg::before{
-  content:"";position:absolute;inset:0;
-  background:url("https://images.unsplash.com/photo-1523848309072-c199db53f137?auto=format&fit=crop&w=2000&q=80") center/cover no-repeat;
-  animation:kenburns 26s ease-out forwards;
+.hero-track{position:absolute;inset:0}
+.hero-slide{
+  position:absolute;inset:0;opacity:0;
+  transition:opacity .9s ease;
 }
-.hero-bg::after{
-  content:"";position:absolute;inset:0;
-  background:rgba(10,10,10,.55);
+.hero-slide.is-active{opacity:1}
+.hero-slide img{width:100%;height:100%;object-fit:cover;object-position:center}
+/* Two scrims: one down from the top so the overlaid header stays readable against
+   bright sky, one in from the left behind the statement. */
+.hero::after{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(10,10,10,.62) 0%,rgba(10,10,10,.22) 34%,rgba(10,10,10,0) 62%),
+    linear-gradient(90deg,rgba(10,10,10,.82) 0%,rgba(10,10,10,.55) 48%,rgba(10,10,10,0) 78%);
 }
-@keyframes kenburns{from{transform:scale(1.1)}to{transform:scale(1)}}
 .hero .wrap{position:relative;z-index:2;width:100%}
-.hero-inner{max-width:760px}
+.hero-inner{max-width:640px;padding-top:58px}
 .hero-kicker{
-  font-size:1.05rem;font-weight:400;letter-spacing:.04em;
-  color:var(--white);margin-bottom:18px;text-transform:lowercase;
+  font-size:.95rem;font-weight:400;letter-spacing:.04em;
+  color:var(--white);margin-bottom:12px;text-transform:lowercase;
 }
 .hero-statement{
-  font-size:clamp(1.9rem,3.8vw,3.3rem);
-  font-weight:700;line-height:1.22;letter-spacing:0;
+  font-size:clamp(1.15rem,2.15vw,2.3rem);
+  font-weight:700;line-height:1.25;letter-spacing:0;
   text-shadow:0 2px 30px rgba(0,0,0,.45);
+}
+
+/* Slide indicators — numeral + a line that fills as the slide plays out. */
+.hero-dots{position:absolute;left:0;right:0;bottom:16px;z-index:3}
+.hero-dots .dots{display:flex;justify-content:center;align-items:center;gap:16px}
+.hero-dot{
+  display:inline-flex;align-items:center;gap:8px;
+  background:none;border:0;padding:4px 0;color:var(--white);
+  opacity:.6;transition:opacity .25s ease;
+}
+.hero-dot:hover{opacity:1}
+.hero-dot.is-active{opacity:1}
+.hero-dot .num{font-size:1rem;font-weight:400;letter-spacing:.02em;line-height:1}
+.hero-dot .dot-line{
+  display:block;width:36px;height:2px;position:relative;overflow:hidden;
+  background:rgba(255,255,255,.35);
+}
+.hero-dot .fill{
+  position:absolute;inset:0;background:var(--gold);
+  transform:scaleX(0);transform-origin:left center;
+}
+.hero-dot.is-active .fill{transform:scaleX(1)}
+@media (prefers-reduced-motion:reduce){
+  .hero-slide{transition:none}
+  .hero-dot .fill{transition:none !important}
 }
 
 /* ---------- About split (photo + copy) ---------- */
@@ -237,13 +269,27 @@ section{padding:104px 0}
   transition:transform .22s ease,box-shadow .22s ease;
 }
 .pcard:hover{transform:translateY(-5px);box-shadow:var(--shadow-md)}
+/* Catalogue stage. Manufacturer cut-outs are transparent PNGs carrying their own
+   margin, so they float on the stage whole — the way Zoomlion presents them.
+   Ordinary photographs have their own backgrounds and would read as a picture
+   pasted in a frame, so those still fill the stage. */
 .pcard .art{
-  height:160px;display:flex;align-items:center;justify-content:center;
+  aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;
   color:var(--ink);position:relative;overflow:hidden;
-  background:linear-gradient(180deg,#F2F2F0 0%,#E8E8E5 100%);
+  background:linear-gradient(180deg,#FFFFFF 0%,#EFEFEC 100%);
 }
 .pcard .art svg{width:76px;height:76px;opacity:.8}
-.pcard .art img{width:100%;height:100%;object-fit:cover}
+.pcard .art img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.pcard .art.is-cutout{padding:14px}
+.pcard .art.is-cutout img{object-fit:contain}
+.pcard:hover .art img{transform:scale(1.06)}
+@media (prefers-reduced-motion:reduce){
+  .pcard .art img{transition:none}
+  .pcard:hover .art img{transform:none}
+}
 .pcard .sector-flag{
   position:absolute;top:12px;left:12px;
   font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:capitalize;
@@ -570,12 +616,18 @@ footer{
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){
   .reveal{opacity:1;transform:none;transition:none}
-  .hero-bg::before{animation:none}
   .marquee{animation-duration:80s}
   .ind-card{transition:none}
 }
 
 /* ---------- Responsive ---------- */
+@media (max-width:1199px){
+  /* The true ratio would leave a ~280px sliver here — give the statement room
+     and let the banner crop from the centre instead. Explicit height, because
+     aspect-ratio + min-height would transfer the constraint into width and
+     overflow the page sideways. */
+  .hero{aspect-ratio:auto;height:max(340px,43.75vw)}
+}
 @media (max-width:1020px){
   .ab-grid{grid-template-columns:1fr;gap:60px}
   .ind-grid{flex-direction:column;min-height:0}
@@ -590,6 +642,14 @@ footer{
 }
 @media (max-width:720px){
   section{padding:80px 0}
+  /* Portrait screens can't show a 4:1 strip at all — crop to a usable banner and
+     switch the scrim to vertical so the statement reads over the machinery. */
+  .hero{height:clamp(400px,75vw,70svh)}
+  .hero-inner{max-width:none;padding-top:44px}
+  .hero::after{
+    background:linear-gradient(180deg,rgba(10,10,10,.5) 0%,rgba(10,10,10,.35) 38%,rgba(10,10,10,.8) 100%);
+  }
+  .hero-dots{bottom:14px}
   .hwrap{padding:0 20px}
   .nav-row{height:70px}
   header.site.scrolled .nav-row{height:64px}

@@ -8,7 +8,7 @@ header('Content-Type: text/plain; charset=utf-8');
 
 require __DIR__ . '/db.php';
 
-echo "Running catalogue v4 migration...\n\n";
+echo "Running catalogue v6 migration...\n\n";
 
 $pdo = db();
 $before = (int)$pdo->query("SELECT COALESCE(`value`, '0') FROM settings WHERE `key` = 'catalog_version'")->fetchColumn();
@@ -17,17 +17,22 @@ $after = (int)$pdo->query("SELECT COALESCE(`value`, '0') FROM settings WHERE `ke
 
 echo "catalog_version: {$before} -> {$after}\n\n";
 
+// New Zoomlion tractor line-up + the lines that received photos in v6.
 $names = [
-    'Pin Cutting Chisel — Field / Garden',
-    'Spring Cultivator',
-    'Tiller / Scissor Spring Tiller',
-    'Rotovator — Field / Garden / Vertical',
-    'Monocoque Tandem Tipper — R100TAHKP4',
-    'Manure Spreader — R100TKG',
-    'Monocoque Tandem Tipper — R220TAHK ROBUST',
-    'Three-Axle Tipper — R180USGA',
-    'Three-Axle Tipper — R140CSGA4P-L',
-    'Tandem Axle 3-Way Tipper — R16TASGAP4',
+    'PQ Series Tractor',
+    'PV3204 Tractor',
+    'PL2304 Tractor',
+    'PL1604 Tractor',
+    'RG Series Tractor',
+    'RL1604 Tractor',
+    'Baler',
+    'Grain Dryer',
+    'Construction Hoist',
+    'Rotary Drilling Rig',
+    'Concrete Batching Plant',
+    'Mining Dump Truck',
+    'Mobile Crushers & Screens',
+    'Surface DTH Drill Rig',
 ];
 
 $stmt = $pdo->prepare('SELECT name, brand, image_url FROM products WHERE name = ?');
@@ -39,6 +44,13 @@ foreach ($names as $name) {
     } else {
         echo "MISSING | {$name}\n";
     }
+}
+
+// These two must be gone after v6.
+$gone = $pdo->prepare('SELECT COUNT(*) FROM products WHERE name = ?');
+foreach (['Zoomlion Tractor Series', 'Boat Transport Trailer'] as $name) {
+    $gone->execute([$name]);
+    echo ((int)$gone->fetchColumn() === 0 ? "REMOVED | " : "STILL PRESENT (!) | ") . $name . "\n";
 }
 
 echo "\nDone. DELETE import_img_products.php from the server.\n";
