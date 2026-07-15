@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ethiotjb/public_html/
+    - /bin/cp -f index.php admin.php db.php config.example.php .htaccess $DEPLOYPATH
+    - /bin/cp -Rf assets $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    - /bin/cp -f uploads/.htaccess $DEPLOYPATH/uploads/
