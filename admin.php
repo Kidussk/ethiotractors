@@ -186,6 +186,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('admin.php?view=products');
         }
 
+        /* ----- Products: display order (drag and drop) ----- */
+        case 'product_reorder': {
+            header('Content-Type: application/json');
+            $ids = [];
+            foreach ((array)($_POST['ids'] ?? []) as $raw) {
+                $id = (int)$raw;
+                if ($id > 0 && !in_array($id, $ids, true)) {
+                    $ids[] = $id;
+                }
+            }
+            if (!$ids) {
+                http_response_code(400);
+                echo json_encode(['ok' => false, 'error' => 'No products were supplied.']);
+                exit;
+            }
+
+            $pdo = db();
+            $pdo->beginTransaction();
+            try {
+                // Renumber the whole catalog first: seeded rows can share a sort value,
+                // and swapping slots is only unambiguous once every row has its own.
+                $all = $pdo->query('SELECT id FROM products ORDER BY sort, id')->fetchAll(PDO::FETCH_COLUMN);
+                $upd = $pdo->prepare('UPDATE products SET sort = ? WHERE id = ?');
+                $slotOf = [];
+                foreach ($all as $i => $rid) {
+                    $slotOf[(int)$rid] = $i + 1;
+                    $upd->execute([$i + 1, (int)$rid]);
+                }
+                // The reordered rows reuse the slots they already occupied, so a sector
+                // view only shuffles its own products and the rest of the catalog stays put.
+                $slots = [];
+                foreach ($ids as $id) {
+                    if (!isset($slotOf[$id])) {
+                        throw new RuntimeException('unknown product id');
+                    }
+                    $slots[] = $slotOf[$id];
+                }
+                sort($slots);
+                foreach ($ids as $i => $id) {
+                    $upd->execute([$slots[$i], $id]);
+                }
+                $pdo->commit();
+            } catch (Throwable) {
+                $pdo->rollBack();
+                http_response_code(409);
+                echo json_encode(['ok' => false, 'error' => 'The catalog changed — reload the page and try again.']);
+                exit;
+            }
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
         case 'product_delete': {
             $id = (int)($_POST['id'] ?? 0);
             $stmt = db()->prepare('SELECT name, image_url FROM products WHERE id = ?');
@@ -327,8 +379,9 @@ if ($view === 'login'):
 <link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/tokens.css">
-<link rel="stylesheet" href="assets/admin.css">
+<?php // Version the styles by mtime so browsers can't pair cached CSS with new markup. ?>
+<link rel="stylesheet" href="assets/tokens.css?v=<?= filemtime(__DIR__ . '/assets/tokens.css') ?>">
+<link rel="stylesheet" href="assets/admin.css?v=<?= filemtime(__DIR__ . '/assets/admin.css') ?>">
 </head>
 <body class="login-body">
   <div>
@@ -526,8 +579,9 @@ $pageTitle = $titles[$view] ?? 'Overview';
 <link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/tokens.css">
-<link rel="stylesheet" href="assets/admin.css">
+<?php // Version the styles by mtime so browsers can't pair cached CSS with new markup. ?>
+<link rel="stylesheet" href="assets/tokens.css?v=<?= filemtime(__DIR__ . '/assets/tokens.css') ?>">
+<link rel="stylesheet" href="assets/admin.css?v=<?= filemtime(__DIR__ . '/assets/admin.css') ?>">
 </head>
 <body>
 <div class="shell">
@@ -697,15 +751,22 @@ $pageTitle = $titles[$view] ?? 'Overview';
         </div>
         <input type="search" id="prodSearch" placeholder="Filter by name…" aria-label="Filter products">
       </div>
+      <div class="reorder-bar">
+        <span class="reorder-hint">Drag the <span class="rh-grip" aria-hidden="true">⠿</span> handle to set the order products appear in on the website. Keyboard: focus a handle and press ↑ or ↓.</span>
+        <span class="reorder-status" id="reorderStatus" role="status" aria-live="polite"></span>
+      </div>
       <div class="table-scroll">
-        <table id="prodTable">
-          <thead><tr><th style="width:56px"></th><th>Product</th><th>Sector</th><th>Brand</th><th>Tags</th><th style="text-align:right">Actions</th></tr></thead>
-          <tbody>
+        <table id="prodTable" data-csrf="<?= e(csrf_token()) ?>">
+          <thead><tr><th style="width:44px"><span class="sr-only">Reorder</span></th><th style="width:56px"></th><th>Product</th><th>Sector</th><th>Brand</th><th>Tags</th><th style="text-align:right">Actions</th></tr></thead>
+          <tbody id="prodRows">
             <?php if (!$productList): ?>
-            <tr><td colspan="6" class="t-empty">No products in this view — add one with the button above.</td></tr>
+            <tr><td colspan="7" class="t-empty">No products in this view — add one with the button above.</td></tr>
             <?php endif; ?>
             <?php foreach ($productList as $p): ?>
-            <tr data-name="<?= e(mb_strtolower($p['name'] . ' ' . $p['category'] . ' ' . $p['brand'])) ?>">
+            <tr data-id="<?= (int)$p['id'] ?>" data-name="<?= e(mb_strtolower($p['name'] . ' ' . $p['category'] . ' ' . $p['brand'])) ?>">
+              <td class="t-grip">
+                <button type="button" class="drag-handle" aria-label="Reorder “<?= e($p['name']) ?>” — hold to drag, or press arrow up and down">⠿</button>
+              </td>
               <td>
                 <?php if ($p['image_url']): ?>
                 <img class="t-thumb" src="<?= e($p['image_url']) ?>" alt="" loading="lazy">
@@ -1170,6 +1231,6 @@ $pageTitle = $titles[$view] ?? 'Overview';
   </div>
 </dialog>
 
-<script src="assets/admin.js"></script>
+<script src="assets/admin.js?v=<?= filemtime(__DIR__ . '/assets/admin.js') ?>"></script>
 </body>
 </html>

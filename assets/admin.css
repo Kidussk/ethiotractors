@@ -178,6 +178,41 @@ td.mono{font-variant-numeric:tabular-nums;color:var(--muted)}
 .t-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .t-actions form{display:inline}
 
+/* ---------- Product reordering (drag and drop) ---------- */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+.reorder-bar{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--line);
+  font-size:.76rem;color:var(--muted);
+}
+.rh-grip{letter-spacing:-.08em;color:var(--ink)}
+.reorder-status{font-weight:600;color:var(--muted);white-space:nowrap}
+.reorder-status.ok{color:var(--brand-strong)}
+.reorder-status.err{color:var(--danger)}
+td.t-grip{padding-left:12px;padding-right:0;width:44px}
+.drag-handle{
+  display:flex;align-items:center;justify-content:center;
+  width:30px;height:30px;padding:0;
+  border:1px solid transparent;border-radius:var(--r-sm);
+  background:transparent;color:var(--muted);
+  font-size:1.05rem;line-height:1;letter-spacing:-.08em;
+  cursor:grab;touch-action:none;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.drag-handle:hover{background:var(--bg-alt);border-color:var(--line);color:var(--ink)}
+.drag-handle:focus-visible{outline:2px solid var(--brand);outline-offset:1px;color:var(--ink)}
+.drag-handle:active{cursor:grabbing}
+tr.dragging{opacity:.45;background:var(--brand-soft)}
+tr.drop-target td{box-shadow:inset 0 2px 0 var(--brand)}
+tr.drop-target-after td{box-shadow:inset 0 -2px 0 var(--brand)}
+tr.just-moved{animation:rowSettle .9s ease}
+@keyframes rowSettle{from{background:var(--gold-soft)}to{background:transparent}}
+/* A filtered table hides rows, so a drop between two of them would be a guess. */
+#prodTable.filtered .drag-handle{opacity:.3;pointer-events:none}
+
 /* ---------- Toolbar / filter tabs ---------- */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .toolbar .spacer{flex:1}

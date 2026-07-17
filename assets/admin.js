@@ -54,6 +54,7 @@
   }
 
   /* ---------- Product table quick filter ---------- */
+  var prodTable = document.getElementById('prodTable');
   var prodSearch = document.getElementById('prodSearch');
   if (prodSearch) {
     var rows = document.querySelectorAll('#prodTable tbody tr[data-name]');
@@ -62,6 +63,141 @@
       rows.forEach(function (row) {
         row.style.display = !q || row.getAttribute('data-name').indexOf(q) !== -1 ? '' : 'none';
       });
+      // Rows are hidden, not removed, so a drop between two of them would be a
+      // guess — reordering waits until the full list is back on screen.
+      if (prodTable) prodTable.classList.toggle('filtered', !!q);
+      if (window.ET_REORDER_HINT) window.ET_REORDER_HINT(!!q);
+    });
+  }
+
+  /* ---------- Product display order: drag, or arrow keys ---------- */
+  var prodRows = document.getElementById('prodRows');
+  if (prodTable && prodRows && prodRows.querySelector('tr[data-id]')) {
+    var statusEl = document.getElementById('reorderStatus');
+    var statusTimer = null;
+    var saveTimer = null;
+    var dragRow = null;
+    var savedOrder = orderIds().join(',');
+
+    function orderIds() {
+      return Array.prototype.map.call(
+        prodRows.querySelectorAll('tr[data-id]'),
+        function (r) { return r.getAttribute('data-id'); }
+      );
+    }
+
+    function setStatus(msg, cls) {
+      if (!statusEl) return;
+      window.clearTimeout(statusTimer);
+      statusEl.textContent = msg;
+      statusEl.className = 'reorder-status' + (cls ? ' ' + cls : '');
+      if (cls === 'ok') {
+        statusTimer = window.setTimeout(function () { statusEl.textContent = ''; }, 2500);
+      }
+    }
+
+    window.ET_REORDER_HINT = function (filtered) {
+      setStatus(filtered ? 'Clear the filter to reorder products.' : '', '');
+    };
+
+    function flashRow(row) {
+      row.classList.remove('just-moved');
+      void row.offsetWidth; // restart the animation on a row moved twice in a row
+      row.classList.add('just-moved');
+    }
+
+    /* Only messages tagged this way reach the admin — a raw parser or network
+       error string would mean nothing to them. */
+    function shown(message) {
+      var err = new Error(message || 'reorder failed');
+      if (message) err.shown = message;
+      return err;
+    }
+
+    function saveOrder() {
+      var ids = orderIds();
+      if (ids.join(',') === savedOrder) return;
+      var body = new FormData();
+      body.append('action', 'product_reorder');
+      body.append('csrf', prodTable.getAttribute('data-csrf'));
+      ids.forEach(function (id) { body.append('ids[]', id); });
+      setStatus('Saving order…', '');
+      fetch('admin.php', { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok || !data.ok) throw shown(data.error);
+          }, function () {
+            // Not JSON: an expired session redirects to the login page instead.
+            throw shown('Your session has expired — sign in again to save the order.');
+          });
+        })
+        .then(function () {
+          savedOrder = ids.join(',');
+          setStatus('Order saved', 'ok');
+        })
+        .catch(function (err) {
+          setStatus((err && err.shown) || 'Could not save the order — reload the page and try again.', 'err');
+        });
+    }
+
+    function queueSave() {
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(saveOrder, 500);
+    }
+
+    function reorderable() { return !prodTable.classList.contains('filtered'); }
+
+    /* Pointer events rather than HTML5 drag-and-drop, so the handle works the
+       same way under a finger on a tablet as under a mouse. */
+    prodRows.addEventListener('pointerdown', function (ev) {
+      var handle = ev.target.closest && ev.target.closest('.drag-handle');
+      if (!handle || ev.button > 0 || !reorderable()) return;
+      ev.preventDefault();
+      dragRow = handle.closest('tr');
+      dragRow.classList.add('dragging');
+      // Capture keeps the drag alive when the pointer strays off the table;
+      // where it isn't available the drag still tracks rows, so don't bail out.
+      try { handle.setPointerCapture(ev.pointerId); } catch (err) {}
+      setStatus('', '');
+    });
+
+    prodRows.addEventListener('pointermove', function (ev) {
+      if (!dragRow) return;
+      var under = document.elementFromPoint(ev.clientX, ev.clientY);
+      var over = under && under.closest ? under.closest('tr[data-id]') : null;
+      if (!over || over === dragRow || over.parentNode !== prodRows) return;
+      var box = over.getBoundingClientRect();
+      var below = ev.clientY > box.top + box.height / 2;
+      prodRows.insertBefore(dragRow, below ? over.nextSibling : over);
+    });
+
+    function endDrag() {
+      if (!dragRow) return;
+      dragRow.classList.remove('dragging');
+      flashRow(dragRow);
+      dragRow = null;
+      saveOrder();
+    }
+
+    prodRows.addEventListener('pointerup', endDrag);
+    prodRows.addEventListener('pointercancel', endDrag);
+
+    prodRows.addEventListener('keydown', function (ev) {
+      var handle = ev.target.closest && ev.target.closest('.drag-handle');
+      if (!handle || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+      if (!reorderable()) return;
+      ev.preventDefault();
+      var row = handle.closest('tr');
+      var sibling = ev.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling;
+      if (!sibling || !sibling.hasAttribute('data-id')) return;
+      if (ev.key === 'ArrowUp') {
+        prodRows.insertBefore(row, sibling);
+      } else {
+        prodRows.insertBefore(sibling, row);
+      }
+      handle.focus(); // the row moved in the DOM; keep the key repeat going
+      flashRow(row);
+      queueSave();
     });
   }
 
