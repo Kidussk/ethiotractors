@@ -176,6 +176,15 @@ function et_upgrade_catalog(PDO $pdo): void
         $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '7')
                        ON DUPLICATE KEY UPDATE `value` = '7'")->execute();
     }
+
+    if ($version < 8) {
+        // v8: the company trades as EthioTractors, not EthioTractors PLC. Matched on
+        // the old value so a name set by the admin is left alone.
+        $pdo->prepare("UPDATE settings SET `value` = 'EthioTractors'
+                       WHERE `key` = 'company_name' AND `value` = 'EthioTractors PLC'")->execute();
+        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '8')
+                       ON DUPLICATE KEY UPDATE `value` = '8'")->execute();
+    }
 }
 
 /** Romsan lines that belong in Power & Logistics rather than Agriculture (v7). */
@@ -595,7 +604,7 @@ function et_seed(PDO $pdo): void
     $stmt->execute(['admin', password_hash('ethio2026', PASSWORD_DEFAULT)]);
 
     $defaults = [
-        'company_name'  => 'EthioTractors PLC',
+        'company_name'  => 'EthioTractors',
         'tagline'       => 'Imported Machinery — Built for Ethiopia’s Work',
         'phone'         => '0960995555',
         'phone2'        => '0961995555',
@@ -754,8 +763,8 @@ function et_seed_products(PDO $pdo): void
     et_seed_zoomlion_tractors($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
     et_seed_catalog_v7($pdo, (int)$pdo->query('SELECT COALESCE(MAX(sort), 0) + 1 FROM products')->fetchColumn());
     // Stamp the catalog version so et_upgrade_catalog() never re-runs these steps.
-    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '7')
-                   ON DUPLICATE KEY UPDATE `value` = '7'")->execute();
+    $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('catalog_version', '8')
+                   ON DUPLICATE KEY UPDATE `value` = '8'")->execute();
 }
 
 /** Romsan Machinery Industry — mobile power, trailers and site containers (catalog v2). */

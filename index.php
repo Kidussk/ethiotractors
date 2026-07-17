@@ -164,7 +164,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     </div>
     <div class="wrap">
       <div class="hero-inner">
-        <div class="hero-kicker">EthioTractors PLC</div>
+        <div class="hero-kicker"><?= e($s['company_name']) ?></div>
         <h1 class="hero-statement">We import and support the machinery that farms, builds and mines Ethiopia.</h1>
       </div>
     </div>
@@ -194,20 +194,55 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
         </div>
         <div class="ab-copy reveal">
           <h2>About Us</h2>
-          <p><?= e($s['company_name']) ?> is a trusted supplier of machinery and advisory services to Ethiopia's agriculture, construction, mining and logistics industries — the authorized importer and distributor of Doğanlar, Zoomlion and Romsan equipment.</p>
-          <p>We are specialists in tractors and tillage implements, earthmoving and quarry machinery, cranes and concrete equipment, mining machinery, and mobile power and trailer systems — delivered, commissioned and supported nationwide.</p>
+          <p class="ab-lead">Powering Ethiopia's Growth from the Ground Up</p>
+          <p>Welcome to Ethiotractors.com, Ethiopia's premier gateway to world-class agricultural, construction and mining machinery.</p>
+          <p>At <?= e($s['company_name']) ?>, we believe that the future of our nation is built on modern mechanization. As Ethiopia undergoes rapid economic transformation, our mission is to empower local farmers, contractors, builders and mining operations with the world's most advanced, reliable and efficient heavy equipment. We source top-tier machinery from leading global manufacturers, bringing cutting-edge technology directly to Ethiopian industries.</p>
+        </div>
+      </div>
+
+      <div class="ab-sectors reveal">
+        <h3>Our Core Sectors</h3>
+        <div class="ab-sector-grid">
+          <div class="ab-sector">
+            <h4>Agricultural Machinery</h4>
+            <p class="ab-sector-tag">Feeding the future.</p>
+            <p>We import high-performance tractors, harvesters and specialized farming implements designed to maximize yields, increase efficiency and modernize Ethiopian agriculture.</p>
+          </div>
+          <div class="ab-sector">
+            <h4>Construction Equipment</h4>
+            <p class="ab-sector-tag">Building tomorrow.</p>
+            <p>From heavy-duty excavators to robust road-building machinery, we provide the infrastructure sector with the brute strength and precision needed to shape our growing cities.</p>
+          </div>
+          <div class="ab-sector">
+            <h4>Mining Technology</h4>
+            <p class="ab-sector-tag">Unlocking natural wealth.</p>
+            <p>We supply rugged, high-capacity mining and earthmoving equipment engineered to perform in the toughest terrains and deepest reserves.</p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ======= Est. band ======= -->
+  <!-- ======= Est. band — why partner with us ======= -->
   <section class="est-band">
     <div class="wrap">
       <div class="est-inner reveal">
         <div class="est-mark">Addis Ababa</div>
-        <h2>About Us</h2>
-        <p><?= e($s['company_name']) ?> supplies products and advisory services to Ethiopia's producers and contractors. From pre-purchase advice to commissioning, genuine parts and after-sales support, we stay involved for the working life of every machine we import.</p>
+        <h2>Why Partner with <?= e($s['company_name']) ?>?</h2>
+        <div class="est-points">
+          <div class="est-point">
+            <h3>Global Quality, Local Expertise</h3>
+            <p>We search the globe to import machinery that is specifically suited to withstand Ethiopia's diverse climates and challenging terrains.</p>
+          </div>
+          <div class="est-point">
+            <h3>Industry-Leading Partnerships</h3>
+            <p>Through our strategic alignment with global giants such as Zoomlion, we ensure our clients have access to the absolute best in engineering innovation.</p>
+          </div>
+          <div class="est-point">
+            <h3>End-to-End Support</h3>
+            <p>We don't just sell machines; we build relationships. From sourcing the right equipment to offering dedicated parts support and technical expertise, we are with you every step of the way.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
