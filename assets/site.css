@@ -242,7 +242,7 @@ nav.main a:not(.btn).active::after{
 .mq-logo{display:flex;align-items:center;flex:none}
 .mq-logo img,.mq-logo svg{display:block;width:auto}
 .mq-doganlar img{height:74px}
-.mq-zoomlion svg{height:30px}
+.mq-zoomlion img{height:40px;border-radius:4px}
 .mq-romsan img{height:38px}
 .mq-sep{width:8px;height:8px;background:var(--gold);flex:none;transform:rotate(45deg)}
 
@@ -378,6 +378,10 @@ section{padding:104px 0}
   background:radial-gradient(circle,rgba(246,212,63,.12),transparent 65%);
 }
 .brand-card>*{position:relative}
+.brand-card .b-logo{
+  display:block;height:48px;width:auto;max-width:180px;object-fit:contain;
+  border-radius:6px;margin-bottom:18px;background:var(--white);padding:4px 8px;
+}
 .brand-card .origin{
   font-size:.68rem;font-weight:700;letter-spacing:.2em;
   text-transform:uppercase;color:var(--gold);margin-bottom:16px;
@@ -718,7 +722,7 @@ footer{
   .ind-card{min-height:260px}
   .marquee-set{gap:34px;padding-right:34px}
   .mq-doganlar img{height:52px}
-  .mq-zoomlion svg{height:24px}
+  .mq-zoomlion img{height:28px}
   .mq-romsan img{height:30px}
   .partner-strip{padding:18px 0}
   .contact-info,.contact-form{padding:30px 24px}

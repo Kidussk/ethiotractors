@@ -189,7 +189,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     <div class="wrap">
       <div class="ab-grid">
         <div class="ab-media reveal">
-          <img src="assets/products/zoomlion-excavator.jpg" alt="Excavator at work" loading="lazy">
+          <img src="assets/products/zoomlion-excavator-about.jpg" alt="Zoomlion excavator at work" loading="lazy">
           <a href="#industries" class="ab-learn">Learn More</a>
         </div>
         <div class="ab-copy reveal">
@@ -247,6 +247,57 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
     </div>
   </section>
 
+  <!-- ======= Brands ======= -->
+  <section id="brands">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div>
+          <span class="eyebrow">Who We Represent</span>
+          <h2>Brands We Import</h2>
+        </div>
+        <p class="lede">Three manufacturers, decades of engineering — brought to Ethiopia with genuine parts and factory-backed support.</p>
+      </div>
+      <div class="brand-cards">
+        <div class="brand-card doganlar reveal">
+          <div>
+            <img src="assets/brands/doganlar.png" alt="Doğanlar Tarım" class="b-logo" loading="lazy">
+            <div class="origin">Turkey — Established Agricultural Manufacturer</div>
+            <h3>Doğanlar Agriculture</h3>
+            <p>Nearly half a century of tillage-equipment manufacturing: ploughs, chisels, disc harrows, cultivators, tillers and rotovators — engineered and heat-treated for demanding soil conditions.</p>
+          </div>
+          <div class="b-foot">
+            <a href="https://www.doganlartarim.com.tr" target="_blank" rel="noopener">doganlartarim.com.tr ↗</a>
+            <span class="b-mark">DG</span>
+          </div>
+        </div>
+        <div class="brand-card zoomlion reveal">
+          <div>
+            <img src="assets/brands/zoomlion.png" alt="Zoomlion" class="b-logo" loading="lazy">
+            <div class="origin">China — Global Heavy Industry Manufacturer</div>
+            <h3>Zoomlion</h3>
+            <p>Earthmoving, mobile crane, construction hoisting, concrete, foundation, mining and agricultural machinery — backed by a global service and parts network.</p>
+          </div>
+          <div class="b-foot">
+            <a href="https://en.zoomlion.com" target="_blank" rel="noopener">en.zoomlion.com ↗</a>
+            <span class="b-mark">ZL</span>
+          </div>
+        </div>
+        <div class="brand-card romsan reveal">
+          <div>
+            <img src="assets/brands/romsan.png" alt="Romsan Machinery Industry" class="b-logo" loading="lazy">
+            <div class="origin">Turkey — Trailer &amp; Mobile Power Manufacturer</div>
+            <h3>Romsan Machinery</h3>
+            <p>NATO-type transport trailers, mobile and containerised generator sets, and field living containers — heavy-duty logistics equipment built in Balıkesir to defence-grade standards.</p>
+          </div>
+          <div class="b-foot">
+            <a href="https://romsan.com" target="_blank" rel="noopener">romsan.com ↗</a>
+            <span class="b-mark">RM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ======= Industries We Serve — expanding accordion ======= -->
   <section id="industries" class="industries">
     <div class="wrap">
@@ -295,9 +346,7 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
   $brandLogos = static function (): void { ?>
         <span class="mq-logo mq-doganlar"><img src="assets/brands/doganlar.png" alt="Doğanlar Agriculture" loading="lazy"></span>
         <span class="mq-sep"></span>
-        <span class="mq-logo mq-zoomlion" role="img" aria-label="Zoomlion">
-          <svg viewBox="0 0 322 44" xmlns="http://www.w3.org/2000/svg"><text x="0" y="36" font-family="Sora, Arial, sans-serif" font-size="38" font-weight="800" letter-spacing="1" fill="#00A54F">ZOOMLION</text></svg>
-        </span>
+        <span class="mq-logo mq-zoomlion"><img src="assets/brands/zoomlion.png" alt="Zoomlion" loading="lazy"></span>
         <span class="mq-sep"></span>
         <span class="mq-logo mq-romsan"><img src="assets/brands/romsan.png" alt="Romsan Machinery Industry" loading="lazy"></span>
         <span class="mq-sep"></span>
@@ -377,54 +426,6 @@ $prefillInterest = mb_substr(trim((string)($_GET['interest'] ?? '')), 0, 200);
         </article>
         <?php endforeach; ?>
         <div class="pgrid-empty" id="pgridEmpty" hidden>No machines match your search — try a different term, or <a href="#contact">ask us directly</a>.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======= Brands ======= -->
-  <section id="brands">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <div>
-          <span class="eyebrow">Who We Represent</span>
-          <h2>Brands We Import</h2>
-        </div>
-        <p class="lede">Three manufacturers, decades of engineering — brought to Ethiopia with genuine parts and factory-backed support.</p>
-      </div>
-      <div class="brand-cards">
-        <div class="brand-card doganlar reveal">
-          <div>
-            <div class="origin">Turkey — Established Agricultural Manufacturer</div>
-            <h3>Doğanlar Agriculture</h3>
-            <p>Nearly half a century of tillage-equipment manufacturing: ploughs, chisels, disc harrows, cultivators, tillers and rotovators — engineered and heat-treated for demanding soil conditions.</p>
-          </div>
-          <div class="b-foot">
-            <a href="https://www.doganlartarim.com.tr" target="_blank" rel="noopener">doganlartarim.com.tr ↗</a>
-            <span class="b-mark">DG</span>
-          </div>
-        </div>
-        <div class="brand-card zoomlion reveal">
-          <div>
-            <div class="origin">China — Global Heavy Industry Manufacturer</div>
-            <h3>Zoomlion</h3>
-            <p>Earthmoving, mobile crane, construction hoisting, concrete, foundation, mining and agricultural machinery — backed by a global service and parts network.</p>
-          </div>
-          <div class="b-foot">
-            <a href="https://en.zoomlion.com" target="_blank" rel="noopener">en.zoomlion.com ↗</a>
-            <span class="b-mark">ZL</span>
-          </div>
-        </div>
-        <div class="brand-card romsan reveal">
-          <div>
-            <div class="origin">Turkey — Trailer &amp; Mobile Power Manufacturer</div>
-            <h3>Romsan Machinery</h3>
-            <p>NATO-type transport trailers, mobile and containerised generator sets, and field living containers — heavy-duty logistics equipment built in Balıkesir to defence-grade standards.</p>
-          </div>
-          <div class="b-foot">
-            <a href="https://romsan.com" target="_blank" rel="noopener">romsan.com ↗</a>
-            <span class="b-mark">RM</span>
-          </div>
-        </div>
       </div>
     </div>
   </section>
